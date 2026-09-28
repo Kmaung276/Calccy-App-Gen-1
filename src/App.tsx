@@ -433,6 +433,10 @@ export default function App() {
   }, [display, firstOperand, activeOperator]);
 
   // Notepad Note Handlers
+  const handleAddNote = (note: NoteEntry) => {
+    setNotes((prev) => [note, ...prev]);
+  };
+
   const handleUpdateNote = (id: string, updates: Partial<NoteEntry>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates } : n))
@@ -860,6 +864,7 @@ export default function App() {
             isOpen={isNotepadOpen}
             onClose={() => setIsNotepadOpen(false)}
             notes={notes}
+            onAddNote={handleAddNote}
             onUpdateNote={handleUpdateNote}
             onDeleteNote={handleDeleteNote}
             onDeleteMultipleNotes={handleDeleteMultipleNotes}

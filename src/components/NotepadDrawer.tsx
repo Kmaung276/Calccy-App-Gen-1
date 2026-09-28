@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   FileText,
   BookmarkCheck,
+  SquarePen,
 } from 'lucide-react';
 import { NoteEntry } from '../types';
 import { LanguageNumeralSystem, localizeNumber } from '../utils/languages';
@@ -23,6 +24,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   notes: NoteEntry[];
+  onAddNote?: (note: NoteEntry) => void;
   onUpdateNote: (id: string, updates: Partial<NoteEntry>) => void;
   onDeleteNote: (id: string) => void;
   onDeleteMultipleNotes?: (ids: string[]) => void;
@@ -35,6 +37,7 @@ export const NotepadDrawer: React.FC<Props> = ({
   isOpen,
   onClose,
   notes,
+  onAddNote,
   onUpdateNote,
   onDeleteNote,
   onDeleteMultipleNotes,
@@ -60,11 +63,45 @@ export const NotepadDrawer: React.FC<Props> = ({
 
   const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
+  // Create a brand new note/memo
+  const handleCreateNewNote = () => {
+    sound.playGlassTap(1250, 0.04, 0.12);
+    sound.triggerHaptic(10);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+    const timeStr = now.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const newId = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+    const newNote: NoteEntry = {
+      id: newId,
+      title: '',
+      expression: '',
+      result: '',
+      fullCalculation: '',
+      timestamp: Date.now(),
+      dateStr,
+      timeStr,
+      content: '',
+    };
+
+    if (onAddNote) {
+      onAddNote(newNote);
+    }
+    setSelectedNoteId(newId);
+    setIsSelectionMode(false);
+  };
+
   const handleCopyNote = (note: NoteEntry) => {
     if (!navigator.clipboard) return;
-    const text = `${note.title ? `[${note.title}]\n` : ''}${note.fullCalculation}\n${
-      note.content ? `Notes: ${note.content}\n` : ''
-    }${note.dateStr} ${note.timeStr}`;
+    const text = `${note.title ? `[${note.title}]\n` : ''}${
+      note.fullCalculation ? `${note.fullCalculation}\n` : ''
+    }${note.content ? `Notes: ${note.content}\n` : ''}${note.dateStr} ${note.timeStr}`;
     navigator.clipboard.writeText(text);
     sound.playGlassTap(1400, 0.06, 0.15);
     setCopiedId(note.id);
@@ -273,9 +310,20 @@ export const NotepadDrawer: React.FC<Props> = ({
                 )
               )}
 
+              {/* NEW NOTE ICON BUTTON (Placed right in front of X button, icon only) */}
+              <button
+                type="button"
+                onClick={handleCreateNewNote}
+                className="p-2 rounded-full hover:bg-white/15 text-cyan-300 hover:text-white transition-colors cursor-pointer"
+                title="New Note"
+              >
+                <SquarePen className="w-4 h-4" />
+              </button>
+
+              {/* Close Button X */}
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer ml-1"
+                className="p-2 rounded-full hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer ml-0.5"
                 title="Close"
               >
                 <X className="w-5 h-5" />
@@ -285,7 +333,7 @@ export const NotepadDrawer: React.FC<Props> = ({
 
           {/* Body: Either Note Detail View or Clean Note List View */}
           {selectedNote ? (
-            /* ================= DETAIL VIEW ================= */
+            /* ================= DETAIL VIEW / NOTE WRITING VIEW ================= */
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {/* Auto-saving Title Input */}
               <div>
@@ -297,6 +345,7 @@ export const NotepadDrawer: React.FC<Props> = ({
                     onUpdateNote(selectedNote.id, { title: e.target.value });
                   }}
                   className="w-full text-base sm:text-lg font-semibold bg-transparent text-white placeholder-white/40 border-b border-white/15 pb-2 focus:outline-none focus:border-cyan-400 transition-colors"
+                  autoFocus={!selectedNote.title && !selectedNote.content}
                 />
                 <div className="text-[10px] text-cyan-300/80 mt-1 flex items-center gap-1">
                   <BookmarkCheck className="w-3 h-3" />
@@ -304,50 +353,52 @@ export const NotepadDrawer: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Full Calculation Display Box */}
-              <div className="p-3.5 rounded-2xl bg-white/[0.06] border border-white/15 backdrop-blur-md space-y-2">
-                <div className="text-[10px] uppercase font-semibold text-white/50 tracking-wider">
-                  Calculation Draft
-                </div>
-                <div className="font-mono text-base text-cyan-200 tracking-wide break-all">
-                  {localizeNumber(selectedNote.fullCalculation, language)}
-                </div>
+              {/* Full Calculation Display Box (Shown if calculation was saved) */}
+              {selectedNote.fullCalculation ? (
+                <div className="p-3.5 rounded-2xl bg-white/[0.06] border border-white/15 backdrop-blur-md space-y-2">
+                  <div className="text-[10px] uppercase font-semibold text-white/50 tracking-wider">
+                    Calculation Draft
+                  </div>
+                  <div className="font-mono text-base text-cyan-200 tracking-wide break-all">
+                    {localizeNumber(selectedNote.fullCalculation, language)}
+                  </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-white/10">
-                  <div className="text-[11px] text-white/50">Result:</div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-semibold text-white">
-                      {localizeNumber(selectedNote.result, language)}
-                    </span>
-                    <button
-                      onClick={() => {
-                        sound.playGlassTap(1300, 0.04, 0.15);
-                        onSelectResult(selectedNote.result);
-                        onClose();
-                      }}
-                      className="px-2 py-0.5 rounded-full bg-cyan-400/20 hover:bg-cyan-400/30 text-cyan-300 text-[10px] font-medium border border-cyan-400/30 flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Load result into calculator"
-                    >
-                      <ArrowDownLeft className="w-3 h-3" />
-                      <span>Use</span>
-                    </button>
+                  <div className="flex items-center justify-between pt-1 border-t border-white/10">
+                    <div className="text-[11px] text-white/50">Result:</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-white">
+                        {localizeNumber(selectedNote.result, language)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          sound.playGlassTap(1300, 0.04, 0.15);
+                          onSelectResult(selectedNote.result);
+                          onClose();
+                        }}
+                        className="px-2 py-0.5 rounded-full bg-cyan-400/20 hover:bg-cyan-400/30 text-cyan-300 text-[10px] font-medium border border-cyan-400/30 flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Load result into calculator"
+                      >
+                        <ArrowDownLeft className="w-3 h-3" />
+                        <span>Use</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
-              {/* User Notes Textarea */}
-              <div className="space-y-1.5">
+              {/* User Notes Textarea (Auto-saving Memo & Note Area) */}
+              <div className="space-y-1.5 flex-1 flex flex-col">
                 <label className="text-[11px] font-medium text-white/60">
                   Notes & Annotations:
                 </label>
                 <textarea
-                  rows={6}
-                  placeholder="Add context, remarks, or client names for this calculation..."
-                  value={selectedNote.content}
+                  rows={selectedNote.fullCalculation ? 6 : 10}
+                  placeholder="Write your note or memo here..."
+                  value={selectedNote.content || ''}
                   onChange={(e) => {
                     onUpdateNote(selectedNote.id, { content: e.target.value });
                   }}
-                  className="w-full p-3 rounded-2xl bg-white/[0.06] border border-white/15 text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 transition-colors backdrop-blur-md resize-none"
+                  className="w-full flex-1 min-h-[140px] p-3 rounded-2xl bg-white/[0.06] border border-white/15 text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 transition-colors backdrop-blur-md resize-none"
                 />
               </div>
 
@@ -453,8 +504,7 @@ export const NotepadDrawer: React.FC<Props> = ({
                     </div>
                     <p className="text-sm font-medium text-white/70">No notes saved yet</p>
                     <p className="text-xs text-white/40 mt-1 max-w-[260px] leading-relaxed">
-                      Tap the small <span className="text-cyan-300 font-semibold">Save icon</span> on
-                      the calculator display after calculating to save drafts here.
+                      Tap the <span className="text-cyan-300 font-semibold">New Note icon</span> at the top to write a memo, or save calculation drafts directly from the calculator.
                     </p>
                   </div>
                 ) : (
@@ -492,7 +542,7 @@ export const NotepadDrawer: React.FC<Props> = ({
                                 : 'bg-white/[0.04] border-white/30 group-hover:border-white/50'
                             }`}
                           >
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </div>
                         )}
 
@@ -504,20 +554,22 @@ export const NotepadDrawer: React.FC<Props> = ({
                                 isSelected ? 'text-rose-200' : 'text-white group-hover:text-cyan-200'
                               }`}
                             >
-                              {note.title || `Draft #${notes.length - index}`}
+                              {note.title || (note.content ? note.content.slice(0, 26) : `Note #${notes.length - index}`)}
                             </span>
                             <span className="text-[10px] text-white/40 shrink-0">
                               {note.dateStr} · {note.timeStr}
                             </span>
                           </div>
 
-                          <div
-                            className={`font-mono text-xs truncate ${
-                              isSelected ? 'text-rose-300/90' : 'text-cyan-300/80'
-                            }`}
-                          >
-                            {localizedCalc}
-                          </div>
+                          {note.fullCalculation ? (
+                            <div
+                              className={`font-mono text-xs truncate ${
+                                isSelected ? 'text-rose-300/90' : 'text-cyan-300/80'
+                              }`}
+                            >
+                              {localizedCalc}
+                            </div>
+                          ) : null}
 
                           {note.content && (
                             <div className="text-[11px] text-white/50 truncate italic">
