@@ -1,0 +1,70 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build & Export Android Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter Environment
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Prepare Flutter Android Project
+        run: |
+          if [ -d "flutter_app" ]; then
+            cd flutter_app
+            flutter create --platforms=android --org com.auracalc.app .
+            flutter pub get
+            flutter build apk --release --no-tree-shake-icons
+            cd ..
+          else
+            flutter create --platforms=android --org com.auracalc.app .
+            flutter pub get
+            flutter build apk --release --no-tree-shake-icons
+          fi
+
+      - name: Locate & Package APK
+        run: |
+          mkdir -p release-output
+          # Search and collect generated APKs
+          find . -name "*.apk" -type f -exec cp {} release-output/ \;
+          if [ -f "flutter_app/build/app/outputs/flutter-apk/app-release.apk" ]; then
+            cp flutter_app/build/app/outputs/flutter-apk/app-release.apk release-output/AuraCalc-v1.0.0-release.apk
+          elif [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk release-output/AuraCalc-v1.0.0-release.apk
+          fi
+          echo "=== Built APK Artifacts ==="
+          ls -lah release-output/
+
+      - name: Upload APK to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuraCalc-Android-Release-APK
+          path: release-output/*.apk
+          if-no-files-found: error
+          retention-days: 30
