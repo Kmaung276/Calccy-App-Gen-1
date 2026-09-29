@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useSpring } from 'motion/react';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, useMotionValue, animate } from 'motion/react';
 import { sound } from '../utils/sound';
 
 interface Props {
@@ -15,58 +15,84 @@ export const Card3DContainer: React.FC<Props> = ({
   isFlipped,
   onFlipToggle,
 }) => {
-  // Store cumulative target angle so continuous 360° rotations don't jump
-  const [cumulativeAngle, setCumulativeAngle] = useState(isFlipped ? 180 : 0);
+  // MotionValues for direct GPU-accelerated transform without triggering React re-renders on every frame
+  const initialAngle = isFlipped ? 180 : 0;
+  const rotateY = useMotionValue(initialAngle);
+  const rotateX = useMotionValue(0);
 
-  // Optimized spring physics for ultra-smooth 60/120Hz mobile & tablet paper flip
-  const springRotateY = useSpring(isFlipped ? 180 : 0, {
-    stiffness: 200,
-    damping: 24,
-    mass: 0.65,
-  });
-  const springRotateX = useSpring(0, { stiffness: 220, damping: 24 });
+  // References to keep state consistent across animations and gestures
+  const cumulativeAngleRef = useRef(initialAngle);
+  const isFlippedRef = useRef(isFlipped);
+  isFlippedRef.current = isFlipped;
 
-  const [currentY, setCurrentY] = useState(isFlipped ? 180 : 0);
+  const [isBack, setIsBack] = useState(isFlipped);
+  const isBackRef = useRef(isFlipped);
+
+  // Gesture tracking
   const isDraggingRef = useRef(false);
+  const wasDraggingRef = useRef(false);
+  const clearWasDraggingTimer = useRef<number | null>(null);
+
   const touchStartPos = useRef({
     x: 0,
     y: 0,
     time: 0,
     baseAngle: 0,
-    isButtonTarget: false,
     hasDecidedGesture: false,
   });
 
-  // Keep spring in sync when isFlipped is toggled externally
+  // Track live angle ONLY to flip the pointer-events & face visibility at 90° & 270°
+  // This fires only 1-2 times per rotation, NOT 60-120 times per second!
   useEffect(() => {
-    const isCurrentlyOdd = Math.abs(Math.round(cumulativeAngle / 180) % 2) === 1;
-    if (isFlipped !== isCurrentlyOdd) {
-      const nextTarget = isFlipped
-        ? Math.round((cumulativeAngle + 180) / 180) * 180
-        : Math.round((cumulativeAngle - 180) / 180) * 180;
-      setCumulativeAngle(nextTarget);
-      springRotateY.set(nextTarget);
-    }
-    springRotateX.set(0);
-  }, [isFlipped]);
-
-  // Track live rotation angle for backface visibility & touch interaction
-  useEffect(() => {
-    const unsub = springRotateY.on('change', (latest) => {
-      setCurrentY(latest);
+    const unsub = rotateY.on('change', (latest) => {
+      const normalized = ((Math.round(latest) % 360) + 360) % 360;
+      const back = normalized > 88 && normalized < 272;
+      if (back !== isBackRef.current) {
+        isBackRef.current = back;
+        setIsBack(back);
+      }
     });
     return () => unsub();
-  }, [springRotateY]);
+  }, [rotateY]);
 
-  // Determine which face is currently visible (0°-90° & 270°-360° = Front, 90°-270° = Back)
-  const normalizedAngle = ((Math.round(currentY) % 360) + 360) % 360;
-  const isBack = normalizedAngle > 88 && normalizedAngle < 272;
+  // Sync external flip toggle (e.g. from top action bar button)
+  useEffect(() => {
+    const currentAngle = rotateY.get();
+    const currentStep = Math.round(currentAngle / 180);
+    const isCurrentlyOdd = Math.abs(currentStep % 2) === 1;
+
+    if (isFlipped !== isCurrentlyOdd) {
+      const targetStep = isFlipped
+        ? (currentStep % 2 === 0 ? currentStep + 1 : currentStep)
+        : (currentStep % 2 !== 0 ? currentStep + 1 : currentStep);
+      const targetAngle = targetStep * 180;
+
+      cumulativeAngleRef.current = targetAngle;
+      animate(rotateY, targetAngle, {
+        type: 'spring',
+        stiffness: 260,
+        damping: 26,
+        mass: 0.6,
+      });
+      animate(rotateX, 0, { type: 'spring', stiffness: 300, damping: 26 });
+    }
+  }, [isFlipped, rotateY, rotateX]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clearWasDraggingTimer.current) {
+        window.clearTimeout(clearWasDraggingTimer.current);
+      }
+    };
+  }, []);
 
   // -------------------------------------------------------------
-  // MOBILE & TABLET TOUCH GESTURE: Silky 360° Drag & Snap
+  // MOBILE TOUCH GESTURE: Silky 360° Smooth Drag & Momentum Snap
   // -------------------------------------------------------------
   const handleTouchStart = (e: React.TouchEvent) => {
     const targetEl = e.target as HTMLElement;
+    // Don't intercept text inputs / selects / sliders
     if (
       targetEl.tagName === 'INPUT' ||
       targetEl.tagName === 'SELECT' ||
@@ -76,15 +102,12 @@ export const Card3DContainer: React.FC<Props> = ({
       return;
     }
 
-    const isButton = Boolean(targetEl.tagName === 'BUTTON' || targetEl.closest('button'));
     const touch = e.touches[0];
-
     touchStartPos.current = {
       x: touch.clientX,
       y: touch.clientY,
       time: Date.now(),
-      baseAngle: currentY,
-      isButtonTarget: isButton,
+      baseAngle: rotateY.get(),
       hasDecidedGesture: false,
     };
     isDraggingRef.current = false;
@@ -97,15 +120,14 @@ export const Card3DContainer: React.FC<Props> = ({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
-    // If starting on a button, require higher threshold (36px) so button taps are never cancelled
-    const threshold = touchStartPos.current.isButtonTarget ? 36 : 12;
-
+    // Differentiate between button tap and horizontal 360 swipe
     if (!touchStartPos.current.hasDecidedGesture) {
-      if (absX > threshold && absX > absY * 1.3) {
+      if (absX > 8 && absX > absY * 0.9) {
         touchStartPos.current.hasDecidedGesture = true;
         isDraggingRef.current = true;
-      } else if (absY > threshold && absY > absX) {
-        // Clear vertical scroll intent, ignore horizontal 3D card rotation
+        wasDraggingRef.current = true;
+      } else if (absY > 12 && absY > absX * 1.2) {
+        // Vertical scroll intent
         touchStartPos.current.hasDecidedGesture = true;
         isDraggingRef.current = false;
         return;
@@ -114,63 +136,80 @@ export const Card3DContainer: React.FC<Props> = ({
 
     if (isDraggingRef.current) {
       if (e.cancelable) {
-        e.preventDefault(); // Stop mobile rubber-band page scrolling
+        e.preventDefault(); // Stop mobile rubber-banding
       }
 
-      // Smooth 1:1 rotation with natural finger tracking across 360°
-      const newAngle = touchStartPos.current.baseAngle + deltaX * 0.85;
-      springRotateY.set(newAngle);
-      // Subtle vertical perspective tilt (-12° to +12°) for true 3D spatial feel
-      springRotateX.set(Math.max(-12, Math.min(12, -deltaY * 0.16)));
+      // Smooth 1:1 direct finger tracking left and right across 360°
+      const newAngle = touchStartPos.current.baseAngle + deltaX * 0.78;
+      rotateY.set(newAngle);
+      rotateX.set(Math.max(-8, Math.min(8, -deltaY * 0.08)));
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      // Was a tap, don't suppress clicks
+      wasDraggingRef.current = false;
+      return;
+    }
     isDraggingRef.current = false;
+
+    // Suppress child button clicks right after drag
+    wasDraggingRef.current = true;
+    if (clearWasDraggingTimer.current) window.clearTimeout(clearWasDraggingTimer.current);
+    clearWasDraggingTimer.current = window.setTimeout(() => {
+      wasDraggingRef.current = false;
+    }, 220);
 
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - touchStartPos.current.x;
-    const elapsed = Math.max(1, Date.now() - touchStartPos.current.time);
-    const velocity = deltaX / elapsed;
+    const elapsed = Math.max(16, Date.now() - touchStartPos.current.time);
+    const velocity = deltaX / elapsed; // px per ms
 
-    // Determine final settled angle based on position + flick momentum
-    let settleTarget = currentY;
-    if (Math.abs(velocity) > 0.4 && Math.abs(deltaX) > 24) {
-      // Fast directional flick
-      settleTarget = velocity > 0 ? currentY + 95 : currentY - 95;
-    }
+    // Natural momentum throw for continuous 360° rotation
+    const momentumDegrees = velocity * 130;
+    const settleTarget = rotateY.get() + momentumDegrees;
 
-    // Snap cleanly to the nearest 180-degree face
+    // Snap cleanly to nearest 180° multiple
     const snappedAngle = Math.round(settleTarget / 180) * 180;
-    setCumulativeAngle(snappedAngle);
-    springRotateY.set(snappedAngle);
-    springRotateX.set(0);
+    cumulativeAngleRef.current = snappedAngle;
 
-    // Trigger haptic and sound
-    sound.triggerHaptic(14);
-    sound.playGlassTap(1150, 0.05, 0.14);
+    // Smooth physics-based spring animation to snap angle
+    animate(rotateY, snappedAngle, {
+      type: 'spring',
+      stiffness: 280,
+      damping: 28,
+      mass: 0.6,
+      velocity: velocity * 20,
+    });
+    animate(rotateX, 0, {
+      type: 'spring',
+      stiffness: 300,
+      damping: 26,
+    });
 
-    // Check if face flipped
+    // Audio & haptic feedback on snap
+    sound.triggerHaptic(12);
+    sound.playGlassTap(1150, 0.04, 0.12);
+
+    // Notify parent if face flipped
     const isNowOdd = Math.abs(Math.round(snappedAngle / 180) % 2) === 1;
-    if (isNowOdd !== isFlipped) {
+    if (isNowOdd !== isFlippedRef.current) {
       onFlipToggle();
     }
   };
 
   // -------------------------------------------------------------
-  // DESKTOP POINTER GESTURE (Mouse Drag Only, Ignore Touch Pointers)
+  // DESKTOP POINTER GESTURE (Mouse Drag left / right across 360°)
   // -------------------------------------------------------------
   const handlePointerDown = (e: React.PointerEvent) => {
-    // Crucial: Ignore touch pointers so mobile/tablet touch handling is 100% clean
-    if (e.pointerType === 'touch') return;
+    if (e.pointerType === 'touch') return; // Handled by touch events
 
     const targetEl = e.target as HTMLElement;
     if (
-      targetEl.tagName === 'BUTTON' ||
       targetEl.tagName === 'INPUT' ||
       targetEl.tagName === 'SELECT' ||
-      targetEl.closest('button') ||
+      targetEl.tagName === 'TEXTAREA' ||
       targetEl.closest('.prevent-swipe')
     ) {
       return;
@@ -180,50 +219,92 @@ export const Card3DContainer: React.FC<Props> = ({
       x: e.clientX,
       y: e.clientY,
       time: Date.now(),
-      baseAngle: currentY,
-      isButtonTarget: false,
-      hasDecidedGesture: true,
+      baseAngle: rotateY.get(),
+      hasDecidedGesture: false,
     };
-    isDraggingRef.current = true;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    isDraggingRef.current = false;
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (e.pointerType === 'touch') return;
-    if (!isDraggingRef.current) return;
+    if (e.buttons !== 1) {
+      if (isDraggingRef.current) {
+        handlePointerUp(e);
+      }
+      return;
+    }
 
     const deltaX = e.clientX - touchStartPos.current.x;
     const deltaY = e.clientY - touchStartPos.current.y;
+    const absX = Math.abs(deltaX);
 
-    const newAngle = touchStartPos.current.baseAngle + deltaX * 0.85;
-    springRotateY.set(newAngle);
-    springRotateX.set(Math.max(-12, Math.min(12, -deltaY * 0.16)));
+    if (!isDraggingRef.current && absX > 6) {
+      isDraggingRef.current = true;
+      wasDraggingRef.current = true;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {
+        // ignore pointer capture error
+      }
+    }
+
+    if (isDraggingRef.current) {
+      const newAngle = touchStartPos.current.baseAngle + deltaX * 0.78;
+      rotateY.set(newAngle);
+      rotateX.set(Math.max(-8, Math.min(8, -deltaY * 0.08)));
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (e.pointerType === 'touch') return;
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      wasDraggingRef.current = false;
+      return;
+    }
     isDraggingRef.current = false;
 
+    wasDraggingRef.current = true;
+    if (clearWasDraggingTimer.current) window.clearTimeout(clearWasDraggingTimer.current);
+    clearWasDraggingTimer.current = window.setTimeout(() => {
+      wasDraggingRef.current = false;
+    }, 220);
+
     const deltaX = e.clientX - touchStartPos.current.x;
-    const elapsed = Math.max(1, Date.now() - touchStartPos.current.time);
+    const elapsed = Math.max(16, Date.now() - touchStartPos.current.time);
     const velocity = deltaX / elapsed;
 
-    let settleTarget = currentY;
-    if (Math.abs(velocity) > 0.4 && Math.abs(deltaX) > 24) {
-      settleTarget = velocity > 0 ? currentY + 95 : currentY - 95;
-    }
+    const momentumDegrees = velocity * 130;
+    const settleTarget = rotateY.get() + momentumDegrees;
 
     const snappedAngle = Math.round(settleTarget / 180) * 180;
-    setCumulativeAngle(snappedAngle);
-    springRotateY.set(snappedAngle);
-    springRotateX.set(0);
+    cumulativeAngleRef.current = snappedAngle;
 
-    sound.playGlassTap(1150, 0.05, 0.14);
+    animate(rotateY, snappedAngle, {
+      type: 'spring',
+      stiffness: 280,
+      damping: 28,
+      mass: 0.6,
+      velocity: velocity * 20,
+    });
+    animate(rotateX, 0, {
+      type: 'spring',
+      stiffness: 300,
+      damping: 26,
+    });
+
+    sound.playGlassTap(1150, 0.04, 0.12);
 
     const isNowOdd = Math.abs(Math.round(snappedAngle / 180) % 2) === 1;
-    if (isNowOdd !== isFlipped) {
+    if (isNowOdd !== isFlippedRef.current) {
       onFlipToggle();
+    }
+  };
+
+  // Intercept and swallow button clicks if user just finished a 360° swipe
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (wasDraggingRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
     }
   };
 
@@ -237,8 +318,8 @@ export const Card3DContainer: React.FC<Props> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="relative w-full h-full flex-1 flex flex-col justify-between select-none touch-pan-y"
-      style={{ touchAction: 'pan-y' }}
+      onClickCapture={handleClickCapture}
+      className="relative w-full h-full flex-1 flex flex-col justify-between select-none touch-none"
     >
       <div
         className="relative w-full h-full flex-1 flex flex-col"
@@ -246,8 +327,8 @@ export const Card3DContainer: React.FC<Props> = ({
       >
         <motion.div
           style={{
-            rotateY: springRotateY,
-            rotateX: springRotateX,
+            rotateY,
+            rotateX,
             transformStyle: 'preserve-3d',
             willChange: 'transform',
           }}

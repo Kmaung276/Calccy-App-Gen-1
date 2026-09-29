@@ -2,10 +2,11 @@
  * Generates verified, error-free Flutter (Dart) source code for Android APK generation.
  * Tested against Flutter 3.27+ / 3.24+ stable channels.
  * Fully features:
- *  - 3D Card Flip to Top 10 Stocks & 5 Pro Trader Forecasts
+ *  - Silky Smooth 360° Continuous Touch Drag & Flick Rotation in both directions
  *  - Full In-App Settings Modal (7 Aurora Themes, Pebble Sizing, Mist Density, Languages, Regions)
  *  - Calculation History Drawer & Notes (Drafts) Drawer
  *  - Center Weather Sign & World Market Live Ticker
+ *  - World Breaking News Continuous Marquee Crawler & NextUint Team Branding
  *  - Scientific Calculator Mode
  *  - Auto-scaling Responsive Layout for all mobile phones with zero overflow
  */
@@ -15,13 +16,14 @@ export function getFlutterSourceCode(): string {
 // AuraCalc - Frosted Glass Multilingual Apple Calculator
 // Complete Full-Featured Mobile App for Android (Flutter 3.24+ / 3.27+)
 // Features:
-// 1. 3D Card Flip Animation (Calculator <-> Top 10 Stocks & Pro Forecasts)
+// 1. Silky Smooth 360° Continuous Touch Drag & Flick Rotation
 // 2. Full Settings Modal (7 Aurora Themes, Pebble Sizing, Vapor Density, Languages, Regions)
 // 3. Calculation History Drawer & Notes (Drafts) Drawer
 // 4. Center Live Weather Sign (City & Meteorological Conditions)
-// 5. World Market Ticker (Gold, Oil, USD, Bitcoin)
-// 6. Scientific Calculator Mode (sin, cos, tan, ln, log, √, π, e, x!, %)
-// 7. Auto-scaling Responsive Layout for all mobile phone screen sizes
+// 5. World Market Ticker with Live Sparklines (Gold, Oil, USD, Bitcoin)
+// 6. World Breaking News Marquee Crawler & "Developed By NextUint Team"
+// 7. Scientific Calculator Mode (sin, cos, tan, ln, log, √, π, e, x!, %)
+// 8. Auto-scaling Responsive Layout for all mobile phone screen sizes
 // ========================================================
 
 import 'dart:async';
@@ -89,6 +91,29 @@ class HistoryEntry {
   });
 }
 
+// Model for Stock Items
+class StockItem {
+  final String sym;
+  final String name;
+  final String sector;
+  final String price;
+  final String chg;
+  final bool isPos;
+  final String target;
+  final String proRating;
+
+  StockItem({
+    required this.sym,
+    required this.name,
+    required this.sector,
+    required this.price,
+    required this.chg,
+    required this.isPos,
+    required this.target,
+    required this.proRating,
+  });
+}
+
 // Main 3D Flippable Screen
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -97,11 +122,16 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
-  // 3D Card Flip Controller
-  late AnimationController _flipController;
-  late Animation<double> _flipAnimation;
-  bool _isFlipped = false;
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
+  // 360° Touch Drag & Momentum Snap Animation
+  double _currentAngle = 0.0;
+  bool _isDragging = false;
+  late AnimationController _snapAnimationController;
+  Animation<double>? _snapAnimation;
+
+  // Marquee Continuous Scroll Controller
+  late ScrollController _marqueeScrollController;
+  Timer? _marqueeTimer;
 
   // Calculator State
   String _display = '0';
@@ -121,6 +151,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   int _cityTemp = 31;
   String _weatherCondition = 'Sunny';
 
+  // Stock Back Screen Filter
+  String _activeWatchlist = 'TOP 10';
+  String _stockSearchQuery = '';
+
   // History & Notes Lists
   final List<HistoryEntry> _history = [];
   final List<NoteEntry> _notes = [
@@ -139,39 +173,90 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     'ar': ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
     'hi': ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'],
     'th': ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '၈', '၉'],
-    'bn': ['০', '১', '২', '৩', '৪', '৫', '၆', '৭', '৮', '৯'],
+    'bn': ['০', '১', '၂', '၃', '৪', '৫', '၆', '၇', '၈', '৯'],
     'zh': ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
-    'fa': ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
+    'fa': ['۰', '۱', '۲', '၃', '۴', '۵', '၆', '۷', '၈', '۹'],
   };
+
+  final List<StockItem> _allStocks = [
+    StockItem(sym: 'NVDA', name: 'NVIDIA Corp', sector: 'AI & Chips', price: '128.50', chg: '+4.2%', isPos: true, target: '\\$150', proRating: '5/5 Strong Buy'),
+    StockItem(sym: 'AAPL', name: 'Apple Inc', sector: 'Consumer Tech', price: '224.20', chg: '+1.8%', isPos: true, target: '\\$245', proRating: '5/5 Strong Buy'),
+    StockItem(sym: 'MSFT', name: 'Microsoft Corp', sector: 'Cloud & AI', price: '432.10', chg: '+0.9%', isPos: true, target: '\\$475', proRating: '4/5 Buy'),
+    StockItem(sym: 'GOOGL', name: 'Alphabet Inc', sector: 'Internet & AI', price: '178.60', chg: '+2.1%', isPos: true, target: '\\$195', proRating: '4/5 Buy'),
+    StockItem(sym: 'AMZN', name: 'Amazon.com', sector: 'E-Commerce', price: '186.40', chg: '+1.5%', isPos: true, target: '\\$210', proRating: '4/5 Buy'),
+    StockItem(sym: 'TSLA', name: 'Tesla Inc', sector: 'Automotive & AI', price: '254.30', chg: '+3.8%', isPos: true, target: '\\$280', proRating: '3/5 Hold'),
+    StockItem(sym: 'META', name: 'Meta Platforms', sector: 'Social & Metaverse', price: '568.00', chg: '+2.9%', isPos: true, target: '\\$620', proRating: '5/5 Strong Buy'),
+    StockItem(sym: 'BRK.B', name: 'Berkshire Hathaway', sector: 'Conglomerate', price: '452.80', chg: '+0.4%', isPos: true, target: '\\$480', proRating: '4/5 Buy'),
+    StockItem(sym: 'LLY', name: 'Eli Lilly', sector: 'Pharma', price: '915.00', chg: '+1.6%', isPos: true, target: '\\$1000', proRating: '5/5 Strong Buy'),
+    StockItem(sym: 'AVGO', name: 'Broadcom Inc', sector: 'Semiconductors', price: '172.40', chg: '+3.1%', isPos: true, target: '\\$195', proRating: '4/5 Buy'),
+    StockItem(sym: 'AMD', name: 'Adv Micro Devices', sector: 'AI & Chips', price: '156.20', chg: '+2.4%', isPos: true, target: '\\$180', proRating: '4/5 Buy'),
+    StockItem(sym: 'NFLX', name: 'Netflix Inc', sector: 'Streaming', price: '685.00', chg: '+1.1%', isPos: true, target: '\\$720', proRating: '4/5 Buy'),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _flipController = AnimationController(
+    _snapAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 550),
     );
-    _flipAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _flipController, curve: Curves.easeInOutCubic),
-    );
+
+    _marqueeScrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startMarqueeScroll();
+    });
+  }
+
+  void _startMarqueeScroll() {
+    _marqueeTimer?.cancel();
+    _marqueeTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (_marqueeScrollController.hasClients) {
+        final maxScroll = _marqueeScrollController.position.maxScrollExtent;
+        final current = _marqueeScrollController.offset;
+        if (current >= maxScroll) {
+          _marqueeScrollController.jumpTo(0.0);
+        } else {
+          _marqueeScrollController.jumpTo(current + 1.2);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
-    _flipController.dispose();
+    _snapAnimationController.dispose();
+    _marqueeTimer?.cancel();
+    _marqueeScrollController.dispose();
     super.dispose();
+  }
+
+  // Smooth Snap Animation to Target Angle with Natural Velocity Interpolation
+  void _animateToAngle(double targetAngle, [double velocity = 0.0]) {
+    _snapAnimationController.stop();
+    final start = _currentAngle;
+    final distance = (targetAngle - start).abs();
+
+    // Dynamic duration: snappy 160ms for small snaps, silky 380ms for full rotations
+    int durationMs = (distance * 135).clamp(160, 420).toInt();
+    if (velocity.abs() > 300) {
+      durationMs = (durationMs * 0.72).clamp(140, 320).toInt();
+    }
+    _snapAnimationController.duration = Duration(milliseconds: durationMs);
+
+    _snapAnimation = Tween<double>(begin: start, end: targetAngle).animate(
+      CurvedAnimation(parent: _snapAnimationController, curve: Curves.easeOutCubic),
+    )..addListener(() {
+        setState(() {
+          _currentAngle = _snapAnimation!.value;
+        });
+      });
+    _snapAnimationController.forward(from: 0.0);
   }
 
   void _toggleFlip() {
     HapticFeedback.mediumImpact();
-    if (_isFlipped) {
-      _flipController.reverse();
-    } else {
-      _flipController.forward();
-    }
-    setState(() {
-      _isFlipped = !_isFlipped;
-    });
+    final target = ((_currentAngle / math.pi).round() + 1) * math.pi;
+    _animateToAngle(target);
   }
 
   String _toLocalizedDigits(String text) {
@@ -189,7 +274,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return sb.toString();
   }
 
-  // Calculator Math Operations
   void _onNumber(String digit) {
     HapticFeedback.lightImpact();
     setState(() {
@@ -389,7 +473,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
-  // Theme Gradients
   List<Color> _getThemeColors() {
     switch (_currentTheme) {
       case 'sunset_aurora':
@@ -411,9 +494,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     }
   }
 
-  // ----------------------------------------------------
-  // Modals & Drawers: History, Notes, Settings
-  // ----------------------------------------------------
   void _openHistoryDrawer() {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -626,19 +706,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 Expanded(
                   child: TabBarView(
                     children: [
-                      // 1. Theme Selector
                       _buildThemeSelectorTab(),
-
-                      // 2. Shape / Pebble Mode
                       _buildPebbleModeTab(),
-
-                      // 3. Vapor Mist Density
                       _buildMistDensityTab(),
-
-                      // 4. Language Selector
                       _buildLanguageTab(),
-
-                      // 5. Region & Weather City Selector
                       _buildRegionTab(),
                     ],
                   ),
@@ -799,14 +870,16 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   // ----------------------------------------------------
-  // BUILD: Main 3D Card Animation View
+  // BUILD: Main 3D Card Animation View with Touch Swiping
   // ----------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final normalized = ((_currentAngle % (2 * math.pi)) + (2 * math.pi)) % (2 * math.pi);
+    final isBack = normalized > (math.pi / 2) && normalized < (3 * math.pi / 2);
+
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Dynamic Aurora Gradient Canvas
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -817,36 +890,52 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // 2. Frosted Mist Blur
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 32.0, sigmaY: 32.0),
-              child: Container(color: Colors.black.withOpacity(0.22)),
+              filter: ImageFilter.blur(sigmaX: 30.0, sigmaY: 30.0),
+              child: Container(color: Colors.black.withOpacity(0.20)),
             ),
           ),
 
-          // 3. 3D Flipping Card Container
           SafeArea(
-            child: AnimatedBuilder(
-              animation: _flipAnimation,
-              builder: (context, child) {
-                final angle = _flipAnimation.value * math.pi;
-                final isUnder = angle > math.pi / 2;
-
-                return Transform(
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.0012)
-                    ..rotateY(angle),
-                  alignment: Alignment.center,
-                  child: isUnder
-                      ? Transform(
-                          transform: Matrix4.identity()..rotateY(math.pi),
-                          alignment: Alignment.center,
-                          child: _buildBackStockCard(),
-                        )
-                      : _buildFrontCalculator(),
-                );
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: (details) {
+                _snapAnimationController.stop();
+                _isDragging = true;
               },
+              onHorizontalDragUpdate: (details) {
+                setState(() {
+                  _currentAngle += (details.primaryDelta ?? 0) * (math.pi / 340);
+                });
+              },
+              onHorizontalDragEnd: (details) {
+                _isDragging = false;
+                final velocity = details.primaryVelocity ?? 0.0;
+                final momentum = (velocity / 1000.0) * (math.pi / 3.0);
+                final target = _currentAngle + momentum;
+                final snapTarget = (target / math.pi).round() * math.pi;
+                HapticFeedback.lightImpact();
+                _animateToAngle(snapTarget, velocity);
+              },
+              onHorizontalDragCancel: () {
+                _isDragging = false;
+                final snapTarget = (_currentAngle / math.pi).round() * math.pi;
+                _animateToAngle(snapTarget);
+              },
+              child: Transform(
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.0012)
+                  ..rotateY(_currentAngle),
+                alignment: Alignment.center,
+                child: isBack
+                    ? Transform(
+                        transform: Matrix4.identity()..rotateY(math.pi),
+                        alignment: Alignment.center,
+                        child: _buildBackStockCard(),
+                      )
+                    : _buildFrontCalculator(),
+              ),
             ),
           ),
         ],
@@ -858,202 +947,185 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   // FRONT: Apple Frosted Glass Calculator
   // ----------------------------------------------------
   Widget _buildFrontCalculator() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final localizedDisplay = _toLocalizedDigits(_display);
-        final localizedExpression = _toLocalizedDigits(_expression);
+    final localizedDisplay = _toLocalizedDigits(_display);
+    final localizedExpression = _toLocalizedDigits(_expression);
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-          child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 4.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // 1. Top In-App Action Bar (History, Notes, WeatherSign, 3D Flip, Scientific, Settings)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left: History & Notes
-                  Row(
+                  IconButton(
+                    icon: const Icon(Icons.access_time_rounded, color: Colors.white70, size: 20),
+                    tooltip: 'History',
+                    onPressed: _openHistoryDrawer,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.bookmark_border_rounded, color: Colors.white70, size: 20),
+                    tooltip: 'Saved Notes Drafts',
+                    onPressed: _openNotesDrawer,
+                  ),
+                ],
+              ),
+
+              GestureDetector(
+                onTap: () => _openSettingsModal(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  ),
+                  child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.access_time, color: Colors.white70, size: 20),
-                        tooltip: 'History',
-                        onPressed: _openHistoryDrawer,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.bookmark_border, color: Colors.white70, size: 20),
-                        tooltip: 'Saved Notes Drafts',
-                        onPressed: _openNotesDrawer,
+                      const Icon(Icons.wb_sunny_rounded, size: 14, color: Colors.amberAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        '\$_selectedCity \$_cityTemp°C',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
                     ],
                   ),
+                ),
+              ),
 
-                  // Center: Weather Sign
-                  GestureDetector(
-                    onTap: () => _openSettingsModal(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.15)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.wb_sunny_outlined, size: 14, color: Colors.amberAccent),
-                          const SizedBox(width: 4),
-                          Text(
-                            '\$_selectedCity \$_cityTemp°C',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.rotate_right_rounded, color: Colors.cyanAccent, size: 22),
+                    tooltip: '3D Flip to Top 10 Stocks',
+                    onPressed: _toggleFlip,
                   ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.science_outlined,
+                      color: _showScientific ? Colors.amberAccent : Colors.white70,
+                      size: 20,
+                    ),
+                    tooltip: 'Scientific Mode',
+                    onPressed: () => setState(() => _showScientific = !_showScientific),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.tune_rounded, color: Colors.white70, size: 20),
+                    tooltip: 'Settings',
+                    onPressed: () => _openSettingsModal(0),
+                  ),
+                ],
+              ),
+            ],
+          ),
 
-                  // Right: 3D Flip, Scientific Toggle, Settings
+          Expanded(
+            flex: 3,
+            child: Container(
+              alignment: Alignment.bottomRight,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (localizedExpression.isNotEmpty)
+                    Text(
+                      localizedExpression,
+                      style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w300),
+                    ),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.rotate_right, color: Colors.cyanAccent, size: 22),
-                        tooltip: '3D Flip to Top 10 Stocks',
-                        onPressed: _toggleFlip,
+                        icon: const Icon(Icons.bookmark_add_outlined, color: Colors.cyanAccent, size: 20),
+                        tooltip: 'Save to Notes',
+                        onPressed: _saveCurrentToNotes,
                       ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.science_outlined,
-                          color: _showScientific ? Colors.amberAccent : Colors.white70,
-                          size: 20,
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            localizedDisplay,
+                            style: const TextStyle(
+                              fontSize: 68,
+                              fontWeight: FontWeight.w300,
+                              color: Colors.white,
+                              letterSpacing: -1.5,
+                            ),
+                          ),
                         ),
-                        tooltip: 'Scientific Mode',
-                        onPressed: () => setState(() => _showScientific = !_showScientific),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.tune, color: Colors.white70, size: 20),
-                        tooltip: 'Settings',
-                        onPressed: () => _openSettingsModal(0),
                       ),
                     ],
                   ),
                 ],
               ),
-
-              // 2. Display Area with Expression & Save button
-              Expanded(
-                flex: 3,
-                child: Container(
-                  alignment: Alignment.bottomRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (localizedExpression.isNotEmpty)
-                        Text(
-                          localizedExpression,
-                          style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w300),
-                        ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.bookmark_add_outlined, color: Colors.cyanAccent, size: 20),
-                            tooltip: 'Save to Notes',
-                            onPressed: _saveCurrentToNotes,
-                          ),
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                localizedDisplay,
-                                style: const TextStyle(
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.w300,
-                                  color: Colors.white,
-                                  letterSpacing: -1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 3. Optional Scientific Keypad Row
-              if (_showScientific)
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildSciBtn('sin'),
-                      _buildSciBtn('cos'),
-                      _buildSciBtn('tan'),
-                      _buildSciBtn('ln'),
-                      _buildSciBtn('sqrt'),
-                      _buildSciBtn('pi'),
-                    ],
-                  ),
-                ),
-
-              // 4. Calculator 5 Rows Keypad (Proportionally Scaled with Expanded)
-              Expanded(
-                flex: 7,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Row 1: AC, ±, %, ÷
-                    _buildKeypadRow([
-                      _KeySpec(label: _display == '0' ? 'AC' : 'C', type: _KeyType.action, onTap: _clear),
-                      _KeySpec(label: '±', type: _KeyType.action, onTap: _toggleSign),
-                      _KeySpec(label: '%', type: _KeyType.action, onTap: _percentage),
-                      _KeySpec(label: '÷', type: _KeyType.operator, isActive: _operator == '÷', onTap: () => _onOperator('÷')),
-                    ]),
-
-                    // Row 2: 7, 8, 9, ×
-                    _buildKeypadRow([
-                      _KeySpec(label: '7', type: _KeyType.number, onTap: () => _onNumber('7')),
-                      _KeySpec(label: '8', type: _KeyType.number, onTap: () => _onNumber('8')),
-                      _KeySpec(label: '9', type: _KeyType.number, onTap: () => _onNumber('9')),
-                      _KeySpec(label: '×', type: _KeyType.operator, isActive: _operator == '×', onTap: () => _onOperator('×')),
-                    ]),
-
-                    // Row 3: 4, 5, 6, −
-                    _buildKeypadRow([
-                      _KeySpec(label: '4', type: _KeyType.number, onTap: () => _onNumber('4')),
-                      _KeySpec(label: '5', type: _KeyType.number, onTap: () => _onNumber('5')),
-                      _KeySpec(label: '6', type: _KeyType.number, onTap: () => _onNumber('6')),
-                      _KeySpec(label: '−', type: _KeyType.operator, isActive: _operator == '−', onTap: () => _onOperator('−')),
-                    ]),
-
-                    // Row 4: 1, 2, 3, +
-                    _buildKeypadRow([
-                      _KeySpec(label: '1', type: _KeyType.number, onTap: () => _onNumber('1')),
-                      _KeySpec(label: '2', type: _KeyType.number, onTap: () => _onNumber('2')),
-                      _KeySpec(label: '3', type: _KeyType.number, onTap: () => _onNumber('3')),
-                      _KeySpec(label: '+', type: _KeyType.operator, isActive: _operator == '+', onTap: () => _onOperator('+')),
-                    ]),
-
-                    // Row 5: 0, ., =
-                    _buildKeypadRow([
-                      _KeySpec(label: '0', type: _KeyType.number, isWide: true, onTap: () => _onNumber('0')),
-                      _KeySpec(label: '.', type: _KeyType.number, onTap: _onDecimal),
-                      _KeySpec(label: '=', type: _KeyType.equals, onTap: _calculate),
-                    ]),
-                  ],
-                ),
-              ),
-
-              // 5. World Market Live Ticker
-              _buildMarketTicker(),
-            ],
+            ),
           ),
-        );
-      },
+
+          if (_showScientific)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSciBtn('sin'),
+                  _buildSciBtn('cos'),
+                  _buildSciBtn('tan'),
+                  _buildSciBtn('ln'),
+                  _buildSciBtn('sqrt'),
+                  _buildSciBtn('pi'),
+                ],
+              ),
+            ),
+
+          Expanded(
+            flex: 8,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildKeypadRow([
+                  _KeySpec(label: _display == '0' ? 'AC' : 'C', type: _KeyType.action, onTap: _clear),
+                  _KeySpec(label: '±', type: _KeyType.action, onTap: _toggleSign),
+                  _KeySpec(label: '%', type: _KeyType.action, onTap: _percentage),
+                  _KeySpec(label: '÷', type: _KeyType.operator, isActive: _operator == '÷', onTap: () => _onOperator('÷')),
+                ]),
+
+                _buildKeypadRow([
+                  _KeySpec(label: '7', type: _KeyType.number, onTap: () => _onNumber('7')),
+                  _KeySpec(label: '8', type: _KeyType.number, onTap: () => _onNumber('8')),
+                  _KeySpec(label: '9', type: _KeyType.number, onTap: () => _onNumber('9')),
+                  _KeySpec(label: '×', type: _KeyType.operator, isActive: _operator == '×', onTap: () => _onOperator('×')),
+                ]),
+
+                _buildKeypadRow([
+                  _KeySpec(label: '4', type: _KeyType.number, onTap: () => _onNumber('4')),
+                  _KeySpec(label: '5', type: _KeyType.number, onTap: () => _onNumber('5')),
+                  _KeySpec(label: '6', type: _KeyType.number, onTap: () => _onNumber('6')),
+                  _KeySpec(label: '−', type: _KeyType.operator, isActive: _operator == '−', onTap: () => _onOperator('−')),
+                ]),
+
+                _buildKeypadRow([
+                  _KeySpec(label: '1', type: _KeyType.number, onTap: () => _onNumber('1')),
+                  _KeySpec(label: '2', type: _KeyType.number, onTap: () => _onNumber('2')),
+                  _KeySpec(label: '3', type: _KeyType.number, onTap: () => _onNumber('3')),
+                  _KeySpec(label: '+', type: _KeyType.operator, isActive: _operator == '+', onTap: () => _onOperator('+')),
+                ]),
+
+                _buildKeypadRow([
+                  _KeySpec(label: '0', type: _KeyType.number, isWide: true, onTap: () => _onNumber('0')),
+                  _KeySpec(label: '.', type: _KeyType.number, onTap: _onDecimal),
+                  _KeySpec(label: '=', type: _KeyType.equals, onTap: _calculate),
+                ]),
+              ],
+            ),
+          ),
+
+          _buildMarketTicker(),
+        ],
+      ),
     );
   }
 
@@ -1061,7 +1133,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return GestureDetector(
       onTap: () => _onScientific(name),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
@@ -1080,7 +1152,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           return Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              padding: const EdgeInsets.symmetric(horizontal: 3.5),
               child: _buildPebble(k),
             ),
           );
@@ -1088,7 +1160,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         return Expanded(
           flex: 1,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 3.5),
             child: _buildPebble(k),
           ),
         );
@@ -1123,7 +1195,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         break;
       case _KeyType.number:
       default:
-        bgStart = Colors.white.withOpacity(0.20);
+        bgStart = Colors.white.withOpacity(0.22);
         bgEnd = Colors.white.withOpacity(0.08);
         break;
     }
@@ -1133,30 +1205,34 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return AspectRatio(
       aspectRatio: spec.isWide ? 2.15 : 1.0,
       child: GestureDetector(
-        onTap: spec.onTap,
+        onTap: () {
+          if (!_isDragging) {
+            spec.onTap();
+          }
+        },
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(spec.isWide ? 38 : 9999),
+            borderRadius: BorderRadius.circular(spec.isWide ? 36 : 9999),
             gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [bgStart, bgEnd]),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withOpacity(0.45),
                 offset: const Offset(0, 4),
                 blurRadius: 10,
               ),
               BoxShadow(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.25),
                 offset: const Offset(0, -1),
                 blurRadius: 2,
               ),
             ],
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.2),
+            border: Border.all(color: Colors.white.withOpacity(0.32), width: 1.2),
           ),
           child: Center(
             child: Text(
               localLabel,
               style: TextStyle(
-                fontSize: spec.label.length > 2 ? 22 : 28,
+                fontSize: spec.label.length > 2 ? 20 : 25,
                 fontWeight: spec.type == _KeyType.operator ? FontWeight.bold : FontWeight.w400,
                 color: textColor,
               ),
@@ -1167,25 +1243,23 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ----------------------------------------------------
-  // BACK: Real-time Top 10 Stocks & 5 Pro Trader Forecasts Card
-  // ----------------------------------------------------
   Widget _buildBackStockCard() {
-    final stocks = [
-      {'sym': 'NVDA', 'name': 'NVIDIA Corp', 'price': '128.50', 'chg': '+4.2%', 'pos': true, 'tgt': '\\$150', 'pro': '5/5 Bullish'},
-      {'sym': 'AAPL', 'name': 'Apple Inc', 'price': '224.20', 'chg': '+1.8%', 'pos': true, 'tgt': '\\$245', 'pro': '5/5 Strong Buy'},
-      {'sym': 'MSFT', 'name': 'Microsoft', 'price': '432.10', 'chg': '+0.9%', 'pos': true, 'tgt': '\\$475', 'pro': '4/5 Buy'},
-      {'sym': 'GOOGL', 'name': 'Alphabet Inc', 'price': '178.60', 'chg': '+2.1%', 'pos': true, 'tgt': '\\$195', 'pro': '4/5 Buy'},
-      {'sym': 'AMZN', 'name': 'Amazon.com', 'price': '186.40', 'chg': '+1.5%', 'pos': true, 'tgt': '\\$210', 'pro': '4/5 Buy'},
-      {'sym': 'TSLA', 'name': 'Tesla Inc', 'price': '254.30', 'chg': '+3.8%', 'pos': true, 'tgt': '\\$280', 'pro': '3/5 Hold'},
-      {'sym': 'META', 'name': 'Meta Platforms', 'price': '568.00', 'chg': '+2.9%', 'pos': true, 'tgt': '\\$620', 'pro': '5/5 Strong Buy'},
-      {'sym': 'BRK.B', 'name': 'Berkshire Hathaway', 'price': '452.80', 'chg': '+0.4%', 'pos': true, 'tgt': '\\$480', 'pro': '4/5 Buy'},
-      {'sym': 'LLY', 'name': 'Eli Lilly', 'price': '915.00', 'chg': '+1.6%', 'pos': true, 'tgt': '\\$1000', 'pro': '5/5 Strong Buy'},
-      {'sym': 'AVGO', 'name': 'Broadcom Inc', 'price': '172.40', 'chg': '+3.1%', 'pos': true, 'tgt': '\\$195', 'pro': '4/5 Buy'},
-    ];
+    final filteredStocks = _allStocks.where((s) {
+      if (_stockSearchQuery.isNotEmpty) {
+        return s.sym.toLowerCase().contains(_stockSearchQuery.toLowerCase()) ||
+               s.name.toLowerCase().contains(_stockSearchQuery.toLowerCase());
+      }
+      if (_activeWatchlist == 'AI/CHIPS') {
+        return s.sector.contains('AI') || s.sector.contains('Chips') || s.sector.contains('Semiconductors');
+      }
+      if (_activeWatchlist == 'BIG TECH') {
+        return s.sector.contains('Tech') || s.sector.contains('Cloud') || s.sector.contains('Internet');
+      }
+      return true;
+    }).toList();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1195,7 +1269,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Top 10 Stocks & Forecasts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Top 10 Stocks & Forecasts', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
                   Text('Tap any price to load into calculator', style: TextStyle(fontSize: 11, color: Colors.cyanAccent)),
                 ],
               ),
@@ -1206,47 +1280,76 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           Container(
-            padding: const EdgeInsets.all(12),
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 16, color: Colors.white54),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: TextField(
+                    onChanged: (val) => setState(() => _stockSearchQuery = val),
+                    style: const TextStyle(fontSize: 12, color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Search stocks e.g. NVDA, AAPL...',
+                      hintStyle: TextStyle(fontSize: 12, color: Colors.white38),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white10),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Column(children: [Text('Goldman', style: TextStyle(fontSize: 10, color: Colors.white54)), Text('Bullish', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
-                Column(children: [Text('Morgan Stanley', style: TextStyle(fontSize: 10, color: Colors.white54)), Text('Overweight', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
-                Column(children: [Text('J.P. Morgan', style: TextStyle(fontSize: 10, color: Colors.white54)), Text('Strong Buy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
+                Column(children: [Text('Goldman', style: TextStyle(fontSize: 9.5, color: Colors.white54)), Text('Bullish', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
+                Column(children: [Text('Morgan Stanley', style: TextStyle(fontSize: 9.5, color: Colors.white54)), Text('Overweight', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
+                Column(children: [Text('J.P. Morgan', style: TextStyle(fontSize: 9.5, color: Colors.white54)), Text('Strong Buy', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.greenAccent))]),
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           Expanded(
             child: ListView.separated(
-              itemCount: stocks.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemCount: filteredStocks.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
               itemBuilder: (context, index) {
-                final s = stocks[index];
+                final s = filteredStocks[index];
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
                     setState(() {
-                      _display = s['price'] as String;
+                      _display = s.price;
                       _shouldResetDisplay = true;
                     });
                     _toggleFlip();
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1254,19 +1357,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(s['sym'] as String, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15)),
-                            Text(s['name'] as String, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                            Text(s.sym, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14)),
+                            Text(s.name, style: const TextStyle(color: Colors.white54, fontSize: 10)),
                           ],
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('\\$\${s['price']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.cyanAccent, fontSize: 16)),
+                            Text('\\$\${s.price}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.cyanAccent, fontSize: 15)),
                             Row(
                               children: [
-                                Text(s['chg'] as String, style: TextStyle(fontSize: 11, color: s['pos'] as bool ? Colors.greenAccent : Colors.redAccent)),
+                                Text(s.chg, style: TextStyle(fontSize: 10, color: s.isPos ? Colors.greenAccent : Colors.redAccent)),
                                 const SizedBox(width: 6),
-                                Text('Target: \${s['tgt']}', style: const TextStyle(fontSize: 11, color: Colors.amberAccent)),
+                                Text('Target: \${s.target}', style: const TextStyle(fontSize: 10, color: Colors.amberAccent)),
                               ],
                             ),
                           ],
@@ -1283,13 +1386,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ----------------------------------------------------
-  // Bottom World Market Live Ticker
-  // ----------------------------------------------------
   Widget _buildMarketTicker() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(top: 2, bottom: 2),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1300,10 +1401,48 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               _buildTickerItem('BTC', '\\$64,820', '+2.65%', true),
             ],
           ),
+          const SizedBox(height: 4),
+
+          Container(
+            height: 22,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.18)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.public, size: 12, color: Colors.black87),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: ListView(
+                    controller: _marqueeScrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      Center(
+                        child: Text(
+                          '⚡ FEDERAL RESERVE SIGNALS STABLE BENCHMARK RATES   ✦   GOLD HITS ALL-TIME HIGH \\$2,658/OZ   ✦   OIL RESILIENT ON GLOBAL TRADE   ✦   BITCOIN SURGES PAST \\$64,800 WITH INSTITUTIONAL INFLOWS   ✦   TECH EQUITIES ADVANCE   ✦   ',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 2),
+
           const Text(
             'Developed By NextUint Team',
-            style: TextStyle(fontSize: 10, color: Colors.white38, letterSpacing: 0.5),
+            style: TextStyle(fontSize: 9.5, color: Colors.white54, letterSpacing: 0.5, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -1321,9 +1460,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1335,7 +1474,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 Text(change, style: TextStyle(fontSize: 8, color: isPos ? Colors.greenAccent : Colors.redAccent)),
               ],
             ),
-            Text(price, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+            Text(price, style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
