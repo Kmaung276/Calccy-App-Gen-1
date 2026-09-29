@@ -7,7 +7,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Clock,
   Sliders,
-  Code2,
   FlaskConical,
   Smartphone,
   Maximize2,
@@ -433,10 +432,6 @@ export default function App() {
   }, [display, firstOperand, activeOperator]);
 
   // Notepad Note Handlers
-  const handleAddNote = (note: NoteEntry) => {
-    setNotes((prev) => [note, ...prev]);
-  };
-
   const handleUpdateNote = (id: string, updates: Partial<NoteEntry>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates } : n))
@@ -583,7 +578,7 @@ export default function App() {
       />
 
       {/* Top In-App Action Bar */}
-      <div className="relative z-20 px-4 pt-3 pb-1 flex items-center justify-between text-white/70">
+      <div className="relative z-20 px-3 sm:px-4 pt-1.5 sm:pt-2.5 pb-0.5 sm:pb-1 flex items-center justify-between text-white/70 shrink-0">
         {/* Left slot: History & Notepad beside each other (No notification dot) */}
         <div className="flex items-center gap-1.5">
           <button
@@ -716,116 +711,9 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between selection:bg-cyan-500/30">
-      {/* 1. Global Navigation Top Bar */}
-      <header className="relative z-40 w-full border-b border-white/10 bg-slate-950/60 backdrop-blur-xl px-4 lg:px-8 py-3 flex items-center justify-between">
-        {/* Brand Zone */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-violet-500 to-amber-300 p-[1.5px] flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <div className="w-full h-full bg-slate-950/80 rounded-full flex items-center justify-center text-xs font-bold text-white">
-              AC
-            </div>
-          </div>
-          <div>
-            <span className="text-base font-semibold tracking-tight text-white block">
-              AuraCalc
-            </span>
-          </div>
-        </div>
-
-        {/* Navigation Links & Toggles */}
-        <nav className="hidden md:flex items-center gap-5 text-xs text-white/70">
-          {/* 3D Paper Flip Toggle */}
-          <button
-            onClick={handleFlipToggle}
-            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-cyan-300 font-medium px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/20"
-            title="Flip 3D Paper Screen"
-          >
-            <Rotate3d className="w-3.5 h-3.5" />
-            <span>{isFlipped ? 'Calculator' : 'Stock Forecast'}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setSettingsInitialTab('language');
-              setIsSettingsOpen(true);
-            }}
-            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Globe className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Language: {selectedLanguage.flag} {selectedLanguage.name}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setSettingsInitialTab('theme');
-              setIsSettingsOpen(true);
-            }}
-            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Theme & Shape</span>
-          </button>
-
-          <button
-            onClick={() => setIsHistoryOpen(true)}
-            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>History</span>
-          </button>
-
-          {/* Notepad button (clean, no noti badge as requested) */}
-          <button
-            onClick={() => {
-              sound.playGlassTap(1100, 0.04, 0.12);
-              setIsNotepadOpen(true);
-            }}
-            className="hover:text-white transition-all flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-full text-white/70"
-            title="Open Calculation Notes"
-          >
-            <NotebookTabs className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Notes</span>
-          </button>
-
-          <button
-            onClick={() => setShowScientific(!showScientific)}
-            className={`transition-colors flex items-center gap-1.5 cursor-pointer ${
-              showScientific ? 'text-amber-400 font-medium' : 'hover:text-white'
-            }`}
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            <span>Scientific</span>
-          </button>
-
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="Toggle Glass Sound"
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <VolumeX className="w-3.5 h-3.5 text-white/40" />
-            )}
-            <span>{soundEnabled ? 'Sound On' : 'Muted'}</span>
-          </button>
-        </nav>
-
-        {/* Primary Action Button: Flutter Mobile Code Export */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsFlutterModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-medium tracking-tight shadow-md shadow-cyan-500/25 transition-all active:scale-95 cursor-pointer"
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>Flutter Code (Dart)</span>
-          </button>
-        </div>
-      </header>
-
-      {/* 2. Main Calculator App Container with 3D Paper Sheet Capabilities */}
-      <main className="flex-1 flex items-center justify-center p-0 sm:p-6 overflow-hidden w-full h-full">
+    <div className="h-[100dvh] max-h-[100dvh] w-full bg-slate-950 text-white flex flex-col justify-center items-center overflow-hidden selection:bg-cyan-500/30 fixed inset-0 sm:relative sm:inset-auto">
+      {/* Main Calculator App Container - Default Pure Mobile View Full Screen */}
+      <main className="w-full h-full flex-1 flex items-center justify-center p-0 overflow-hidden">
         <MobileFrame
           showPhoneFrame={showPhoneFrame}
           onToggleFrame={() => setShowPhoneFrame(!showPhoneFrame)}
@@ -864,7 +752,6 @@ export default function App() {
             isOpen={isNotepadOpen}
             onClose={() => setIsNotepadOpen(false)}
             notes={notes}
-            onAddNote={handleAddNote}
             onUpdateNote={handleUpdateNote}
             onDeleteNote={handleDeleteNote}
             onDeleteMultipleNotes={handleDeleteMultipleNotes}
@@ -902,20 +789,11 @@ export default function App() {
         </MobileFrame>
       </main>
 
-      {/* 3. Flutter Source Code Modal */}
+      {/* Flutter Source Code Modal */}
       <FlutterCodeModal
         isOpen={isFlutterModalOpen}
         onClose={() => setIsFlutterModalOpen(false)}
       />
-
-      {/* 4. Subtle Clean English Footer */}
-      <footer className="relative z-30 px-6 py-2.5 text-center text-xs text-white/40 flex items-center justify-center gap-4">
-        <span>AuraCalc 3D Paper Sheet Edition</span>
-        <span>·</span>
-        <span>Life Mortality Counter</span>
-        <span>·</span>
-        <span>360° Rotatable Glass</span>
-      </footer>
     </div>
   );
 }

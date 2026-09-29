@@ -61,11 +61,11 @@ export const Keypad: React.FC<Props> = ({
 
   return (
     <div
-      className="w-full flex-1 flex flex-col justify-evenly items-center gap-2 sm:gap-2.5 px-3 sm:px-4 pb-1 pt-1 touch-manipulation select-none"
+      className="w-full flex-1 flex flex-col justify-evenly items-center gap-1 sm:gap-2 px-3 pb-0.5 pt-0.5 touch-manipulation select-none min-h-0"
       style={{ touchAction: 'manipulation' }}
     >
       {/* Row 1: Actions & Division */}
-      <div className="w-full flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 items-center justify-items-center">
+      <div className="w-full flex-1 grid grid-cols-4 gap-2 sm:gap-2.5 items-center justify-items-center">
         <GlassButton
           label={clearLabel}
           type="action"
@@ -101,7 +101,7 @@ export const Keypad: React.FC<Props> = ({
       </div>
 
       {/* Row 2: 7, 8, 9, × */}
-      <div className="w-full flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 items-center justify-items-center">
+      <div className="w-full flex-1 grid grid-cols-4 gap-2 sm:gap-2.5 items-center justify-items-center">
         {renderDigitButton('7', 1.06, '52% 48% 49% 51%')}
         {renderDigitButton('8', 0.88, '50% 50% 52% 48%')}
         {renderDigitButton('9', 1.14, '47% 53% 51% 49%')}
@@ -116,7 +116,7 @@ export const Keypad: React.FC<Props> = ({
       </div>
 
       {/* Row 3: 4, 5, 6, − */}
-      <div className="w-full flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 items-center justify-items-center">
+      <div className="w-full flex-1 grid grid-cols-4 gap-2 sm:gap-2.5 items-center justify-items-center">
         {renderDigitButton('4', 0.92, '51% 49% 48% 52%')}
         {renderDigitButton('5', 1.18, '46% 54% 52% 48%')}
         {renderDigitButton('6', 0.90, '53% 47% 51% 49%')}
@@ -131,7 +131,7 @@ export const Keypad: React.FC<Props> = ({
       </div>
 
       {/* Row 4: 1, 2, 3, + */}
-      <div className="w-full flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 items-center justify-items-center">
+      <div className="w-full flex-1 grid grid-cols-4 gap-2 sm:gap-2.5 items-center justify-items-center">
         {renderDigitButton('1', 1.10, '49% 51% 53% 47%')}
         {renderDigitButton('2', 0.84, '50% 50% 50% 50%')}
         {renderDigitButton('3', 1.05, '48% 52% 49% 51%')}
@@ -146,7 +146,7 @@ export const Keypad: React.FC<Props> = ({
       </div>
 
       {/* Row 5: 0, ., = */}
-      <div className="w-full flex-1 grid grid-cols-4 gap-2.5 sm:gap-3 items-center justify-items-center">
+      <div className="w-full flex-1 grid grid-cols-4 gap-2 sm:gap-2.5 items-center justify-items-center">
         <div className="col-span-2 flex items-center justify-center w-full">
           {renderDigitButton('0', 1.06, '38px 40px 38px 40px', true)}
         </div>

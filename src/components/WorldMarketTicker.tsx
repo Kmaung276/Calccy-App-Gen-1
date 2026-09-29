@@ -315,7 +315,7 @@ export const WorldMarketTicker: React.FC<Props> = ({ onSelectPrice }) => {
   const marqueeText = headlines.join('   ✦   ');
 
   return (
-    <div className="relative z-20 w-full px-3 pb-3 pt-0.5 select-none space-y-1.5">
+    <div className="relative z-20 w-full px-2.5 pb-1.5 pt-0.5 select-none space-y-1 shrink-0">
       {/* ========================================================
           1. 4 WORLD MARKET ASSETS (GOLD, OIL, DOLLAR, BITCOIN)
           Pure transparent frosted glass - Frameless
@@ -333,7 +333,7 @@ export const WorldMarketTicker: React.FC<Props> = ({ onSelectPrice }) => {
               whileTap={{ scale: 0.94 }}
               onClick={() => handleItemClick(item)}
               title={`Click to calculate with ${item.name}: ${item.prefix}${formattedPrice}`}
-              className="relative flex flex-col items-center justify-between py-1 px-1 rounded-xl bg-transparent hover:bg-white/[0.08] active:bg-white/[0.12] transition-all cursor-pointer group"
+              className="relative flex flex-col items-center justify-between py-0.5 px-1 rounded-xl bg-transparent hover:bg-white/[0.08] active:bg-white/[0.12] transition-all cursor-pointer group"
             >
               {/* Asset Name & 24h Change */}
               <div className="w-full flex items-center justify-between text-[10px] tracking-tight">
@@ -371,7 +371,7 @@ export const WorldMarketTicker: React.FC<Props> = ({ onSelectPrice }) => {
           - Pure transparent frosted glass (NO red badge, NO red text)
           - Dark text scrolling right-to-left
          ======================================================== */}
-      <div className="relative w-full h-6 rounded-full overflow-hidden flex items-center bg-white/[0.15] backdrop-blur-md border border-white/20 shadow-inner px-2.5">
+      <div className="relative w-full h-5.5 rounded-full overflow-hidden flex items-center bg-white/[0.15] backdrop-blur-md border border-white/20 shadow-inner px-2.5 shrink-0">
         {/* Subtle Frosted Globe Icon (No red button) */}
         <div className="shrink-0 flex items-center gap-1 pr-2 text-slate-900/80">
           <Globe className="w-3 h-3 text-slate-950 animate-spin-slow" />
@@ -379,7 +379,7 @@ export const WorldMarketTicker: React.FC<Props> = ({ onSelectPrice }) => {
 
         {/* Marquee Track: Smooth Continuous Horizontal Scroll Right-to-Left */}
         <div className="relative flex-1 h-full overflow-hidden flex items-center">
-          <div className="inline-flex whitespace-nowrap animate-marquee items-center font-bold text-[11px] tracking-tight text-slate-950 font-sans selection:bg-cyan-500/30">
+          <div className="inline-flex whitespace-nowrap animate-marquee items-center font-bold text-[10.5px] tracking-tight text-slate-950 font-sans selection:bg-cyan-500/30">
             <span className="mr-8">{marqueeText}</span>
             <span className="mr-8">✦   {marqueeText}</span>
           </div>
@@ -387,9 +387,9 @@ export const WorldMarketTicker: React.FC<Props> = ({ onSelectPrice }) => {
       </div>
 
       {/* Developed By NextUint Team - On pure transparent backdrop with dark metallic styling */}
-      <div className="w-full flex items-center justify-center pt-1 pb-0.5">
+      <div className="w-full flex items-center justify-center pt-0.5 pb-0.5 shrink-0">
         <span
-          className="text-[11px] font-semibold tracking-wider select-none text-slate-900"
+          className="text-[10px] font-semibold tracking-wider select-none text-slate-900"
           style={{
             background: 'linear-gradient(135deg, #090d16 0%, #475569 25%, #0f172a 50%, #64748b 75%, #020617 100%)',
             WebkitBackgroundClip: 'text',

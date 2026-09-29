@@ -12,12 +12,12 @@ interface Props {
 }
 
 export const MobileFrame: React.FC<Props> = ({ children }) => {
-  // Auto Match for Mobile, Tablet, iPad / Pad, and Desktop:
-  // - Mobile (<640px): 100% full screen edge-to-edge, zero borders, zero black gaps
-  // - Tablet & Pad (640px - 1024px): Proportional auto-expanding canvas (max-w-2xl) that fills viewport height
-  // - Desktop: Balanced glass slate centered vertically, 100dvh auto-match
+  // Pure Mobile View as Default:
+  // - 100% full height edge-to-edge on mobile phones (zero scroll, zero black bars)
+  // - Centered standard mobile phone width on desktop (max-w-[430px]) with full viewport height
+  // - Calc screen and Stock Trader screen both expand to 100% full height on both sides
   return (
-    <div className="relative w-full h-[100dvh] min-h-[100dvh] max-h-[100dvh] sm:max-w-xl md:max-w-2xl lg:max-w-3xl sm:mx-auto flex flex-col justify-between rounded-none sm:rounded-[36px] md:rounded-[44px] overflow-hidden border-0 sm:border sm:border-white/20 bg-slate-950/85 sm:bg-slate-950/45 backdrop-blur-3xl shadow-none sm:shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(6,182,212,0.15)] transition-all">
+    <div className="relative w-full h-[100dvh] max-h-[100dvh] sm:max-w-[430px] sm:mx-auto flex flex-col justify-between overflow-hidden border-0 bg-slate-950 transition-all">
       <div
         className="relative w-full h-full flex-1 flex flex-col justify-between overflow-hidden"
         style={{ perspective: 1400 }}

@@ -29,10 +29,10 @@ export const Display: React.FC<Props> = ({
 
   // Compute font size dynamically based on length
   const getFontSizeClass = (len: number) => {
-    if (len > 12) return 'text-3xl sm:text-4xl';
-    if (len > 9) return 'text-4xl sm:text-5xl';
-    if (len > 7) return 'text-5xl sm:text-6xl';
-    return 'text-6xl sm:text-7xl';
+    if (len > 12) return 'text-2xl sm:text-3xl';
+    if (len > 9) return 'text-3xl sm:text-4xl';
+    if (len > 7) return 'text-4xl sm:text-5xl';
+    return 'text-5xl sm:text-6xl';
   };
 
   const handleCopy = () => {
@@ -54,9 +54,9 @@ export const Display: React.FC<Props> = ({
   };
 
   return (
-    <div className="relative w-full flex flex-col justify-end px-5 pt-6 pb-4 select-none">
+    <div className="relative w-full flex flex-col justify-end px-4 pt-1 sm:pt-2 pb-1 select-none shrink-0">
       {/* Top Expression line */}
-      <div className="flex items-center justify-between min-h-[28px] mb-1">
+      <div className="flex items-center justify-between min-h-[22px] mb-0.5">
         <div className="flex items-center gap-1.5 text-xs text-white/50 tracking-wider font-light">
           {localizedExpression ? (
             <>

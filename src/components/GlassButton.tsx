@@ -41,8 +41,8 @@ export const GlassButton: React.FC<Props> = ({
     onClick();
   };
 
-  // Base dimension calibrated for comfortable touch & full-screen presence
-  const baseDim = 72; // px
+  // Base dimension calibrated for comfortable touch & full-screen presence without cutting off World Breaking News
+  const baseDim = 58; // px
   let computedWidth = baseDim;
   let computedHeight = baseDim;
 
@@ -62,7 +62,7 @@ export const GlassButton: React.FC<Props> = ({
   // Visual appearance styles: 3D Raised Convex Glass Pebbles (ကြွတက်နေသော ပုံစံ)
   let bgClasses =
     'bg-gradient-to-b from-white/[0.22] via-white/[0.14] to-white/[0.06] text-white hover:from-white/[0.28] hover:to-white/[0.10]';
-  let textClasses = 'text-2xl sm:text-3xl font-light tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]';
+  let textClasses = 'text-xl sm:text-2xl font-light tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]';
   let customBoxShadow =
     '0 12px 24px -4px rgba(0,0,0,0.7), 0 6px 12px -2px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.75), inset 0 -3px 4px rgba(0,0,0,0.4)';
   let borderTopColor = 'rgba(255, 255, 255, 0.75)';
@@ -108,7 +108,7 @@ export const GlassButton: React.FC<Props> = ({
   return (
     <div
       className={`flex items-center justify-center ${
-        isWide ? 'w-full' : 'w-full h-full max-w-[82px] max-h-[82px]'
+        isWide ? 'w-full' : 'w-full h-full max-w-[70px] max-h-[70px]'
       }`}
     >
       <motion.button
@@ -123,8 +123,8 @@ export const GlassButton: React.FC<Props> = ({
         style={{
           width: isWide ? '100%' : `${computedWidth}px`,
           height: `${computedHeight}px`,
-          maxWidth: isWide ? '176px' : '82px',
-          maxHeight: '82px',
+          maxWidth: isWide ? '154px' : '70px',
+          maxHeight: '70px',
           borderRadius: customRadius,
           boxShadow: customBoxShadow,
           borderTop: `1.8px solid ${borderTopColor}`,
