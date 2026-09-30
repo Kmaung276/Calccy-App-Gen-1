@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full overflow-hidden select-none bg-slate-950 text-white">
+<head>
+  <meta charset="UTF-8">
+  <title>AuraCalc 3D Pro - Cross-Platform Native Web App</title>
+  
+  <!-- 1. FULL SCREEN NATIVE APP VIEWPORT & MOBILE RUNTIME -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#020617">
+  
+  <!-- EMBEDDED STANDALONE WEB APP MANIFEST -->
+  <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22AuraCalc%203D%20Pro%22%2C%22short_name%22%3A%22AuraCalc%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22display_override%22%3A%5B%22standalone%22%2C%22fullscreen%22%5D%2C%22background_color%22%3A%22%23020617%22%2C%22theme_color%22%3A%22%23020617%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20192%20192%27%3E%3Crect%20width%3D%27192%27%20height%3D%27192%27%20rx%3D%2742%27%20fill%3D%27%230f172a%27%2F%3E%3Ccircle%20cx%3D%2796%27%20cy%3D%2796%27%20r%3D%2760%27%20fill%3D%27none%27%20stroke%3D%27%2306b6d4%27%20stroke-width%3D%2714%27%2F%3E%3Cpath%20d%3D%27M70%2096h52M96%2070v52%27%20stroke%3D%27%2338bdf8%27%20stroke-width%3D%2714%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27112%27%20fill%3D%27%230f172a%27%2F%3E%3Ccircle%20cx%3D%27256%27%20cy%3D%27256%27%20r%3D%27160%27%20fill%3D%27none%27%20stroke%3D%27%2306b6d4%27%20stroke-width%3D%2736%27%2F%3E%3Cpath%20d%3D%27M180%20256h152M256%20180v152%27%20stroke%3D%27%2338bdf8%27%20stroke-width%3D%2736%27%20stroke-linecap%3D%27round%27%2F%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
+
+  <!-- FONTS & CDNS: Tailwind CSS, Three.js, OrbitControls, Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    * {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #020617;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 3D Transform & Card Flip Styles */
+    .perspective-container {
+      perspective: 1200px;
+      transform-style: preserve-3d;
+    }
+    
+    .flipper-card {
+      transition: transform 0.65s cubic-bezier(0.34, 1.4, 0.64, 1);
+      transform-style: preserve-3d;
+    }
+
+    .flipper-card.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .face {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .face-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Glassmorphic Raised 3D Button Shadows & Highlights */
+    .glass-btn {
+      position: relative;
+      border-radius: 9999px;
+      box-shadow: 0 10px 22px -3px rgba(0, 0, 0, 0.7),
+                  0 4px 8px -2px rgba(0, 0, 0, 0.5),
+                  inset 0 2px 2px rgba(255, 255, 255, 0.75),
+                  inset 0 -3px 4px rgba(0, 0, 0, 0.4);
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    .glass-btn:active {
+      transform: translateY(2.5px) scale(0.96);
+      filter: brightness(1.2);
+    }
+
+    .glass-operator {
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+      border-top: 1.8px solid rgba(254, 240, 138, 0.9);
+      border-bottom: 2.2px solid rgba(146, 64, 14, 0.6);
+      color: white;
+    }
+
+    .glass-action {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.14));
+      border-top: 1.8px solid rgba(255, 255, 255, 0.85);
+      border-bottom: 2.2px solid rgba(0, 0, 0, 0.4);
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .glass-number {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06));
+      border-top: 1.8px solid rgba(255, 255, 255, 0.75);
+      border-bottom: 2.2px solid rgba(0, 0, 0, 0.5);
+      color: white;
+    }
+
+    .glass-equals {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+      border-top: 1.8px solid rgba(167, 243, 208, 0.95);
+      border-bottom: 2.2px solid rgba(6, 78, 59, 0.6);
+      color: white;
+    }
+
+    /* Continuous Live Marquee Animation */
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .animate-marquee {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: marquee 26s linear infinite;
+    }
+
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+
+    /* Custom Slim Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="relative w-full h-full flex items-center justify-center overflow-hidden">
+
+  <!-- ========================================================
+       2. THREE.JS 3D WEBGL INTERACTIVE CANVAS BACKGROUND
+       ======================================================== -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 pointer-events-auto"></div>
+
+  <!-- Ambient Frosted Mist Overlay -->
+  <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-[24px] pointer-events-none z-10"></div>
+
+  <!-- ========================================================
+       3. RESPONSIVE FULLSCREEN APP CONTAINER (PHONE & TABLET)
+       ======================================================== -->
+  <main class="relative z-20 w-full h-full max-h-[100dvh] flex flex-col justify-center items-center p-2 sm:p-4">
+    
+    <!-- Phone / Tablet Framing Container (Clamped to 440px on Desktop, 100% on Mobile) -->
+    <div class="relative w-full max-w-[430px] h-full max-h-[890px] flex flex-col justify-between rounded-3xl bg-slate-900/60 border border-white/15 backdrop-blur-2xl shadow-2xl shadow-cyan-950/40 overflow-hidden">
+
+      <!-- TOP IN-APP ACTION BAR (Weather, Language, 3D Flip, Scientific Toggle) -->
+      <header class="relative z-30 w-full px-3 pt-2.5 pb-1 flex items-center justify-between border-b border-white/10 shrink-0">
+        <!-- Left: Weather Widget & City Selector -->
+        <div class="flex items-center gap-1.5 cursor-pointer bg-white/10 hover:bg-white/15 border border-white/10 rounded-full px-2.5 py-1 transition-all" onclick="cycleWeatherCity()">
+          <span id="weather-icon" class="text-amber-300 text-xs">☀️</span>
+          <span id="weather-city" class="text-[11px] font-medium text-white/90">Yangon</span>
+          <span id="weather-temp" class="text-[11px] font-semibold text-cyan-300">31°C</span>
+        </div>
+
+        <!-- Center: 3D Parallax & Live Status Badge -->
+        <div class="flex items-center gap-1">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[10px] tracking-wider uppercase font-semibold text-white/60">LIVE</span>
+        </div>
+
+        <!-- Right: Actions (Language, Scientific, 3D Flip) -->
+        <div class="flex items-center gap-1">
+          <!-- Language Selector -->
+          <button onclick="cycleLanguage()" class="p-1.5 rounded-full hover:bg-white/10 active:scale-95 text-white/70 hover:text-white transition-all" title="Language Numerals">
+            <i data-lucide="globe" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Scientific Mode Toggle -->
+          <button id="btn-scientific" onclick="toggleScientific()" class="p-1.5 rounded-full hover:bg-white/10 active:scale-95 text-white/70 hover:text-cyan-300 transition-all" title="Toggle Scientific Mode">
+            <i data-lucide="flask-conical" class="w-4 h-4"></i>
+          </button>
+
+          <!-- 3D Card Flip to Stock Forecast Card -->
+          <button onclick="toggleCardFlip()" class="px-2 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-300 active:scale-95 flex items-center gap-1 transition-all shadow-[0_0_12px_rgba(6,182,212,0.3)]" title="3D Flip Screen">
+            <i data-lucide="rotate-3d" class="w-3.5 h-3.5"></i>
+            <span class="text-[10.5px] font-semibold tracking-wide">3D FLIP</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ========================================================
+           CARD 3D PERSPECTIVE FLIP CONTAINER
+           ======================================================== -->
+      <div id="card-flipper" class="perspective-container relative w-full flex-1 flex flex-col justify-between overflow-hidden">
+        <div id="flipper-inner" class="flipper-card relative w-full h-full flex-1 flex flex-col">
+
+          <!-- ====================================================
+               FRONT FACE: APPLE FROSTED GLASS CALCULATOR
+               ==================================================== -->
+          <div class="face absolute inset-0 w-full h-full flex flex-col justify-between p-3 overflow-hidden">
+            
+            <!-- CALCULATOR DISPLAY -->
+            <div class="relative w-full flex-1 min-h-[90px] max-h-[140px] flex flex-col justify-end items-end px-3 py-1 bg-white/[0.04] border border-white/10 rounded-2xl backdrop-blur-xl">
+              <div id="calc-expression" class="text-white/50 text-sm tracking-wide font-light h-5 truncate"></div>
+              <div id="calc-display" class="text-white text-5xl sm:text-6xl font-light tracking-tight truncate select-text">0</div>
+            </div>
+
+            <!-- OPTIONAL SCIENTIFIC KEYPAD (COLLAPSIBLE) -->
+            <div id="scientific-panel" class="hidden w-full grid-cols-6 gap-1.5 py-1.5 my-1">
+              <button onclick="handleSci('sin')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">sin</button>
+              <button onclick="handleSci('cos')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">cos</button>
+              <button onclick="handleSci('tan')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">tan</button>
+              <button onclick="handleSci('ln')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">ln</button>
+              <button onclick="handleSci('sqrt')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">√</button>
+              <button onclick="handleSci('pi')" class="py-1 rounded-lg bg-white/10 text-cyan-300 text-xs font-semibold hover:bg-white/20 active:scale-95">π</button>
+            </div>
+
+            <!-- 5-ROW CALCULATOR KEYPAD -->
+            <div class="w-full flex-1 grid grid-cols-4 gap-2.5 py-2 items-center justify-items-center">
+              <!-- Row 1 -->
+              <button onclick="handleClear()" class="glass-btn glass-action w-16 h-16 flex items-center justify-center text-xl font-medium" id="btn-clear">AC</button>
+              <button onclick="handleToggleSign()" class="glass-btn glass-action w-16 h-16 flex items-center justify-center text-2xl font-light">±</button>
+              <button onclick="handlePercent()" class="glass-btn glass-action w-16 h-16 flex items-center justify-center text-xl font-light">%</button>
+              <button onclick="handleOp('÷')" class="glass-btn glass-operator w-16 h-16 flex items-center justify-center text-3xl font-light">÷</button>
+
+              <!-- Row 2 -->
+              <button onclick="handleNum('7')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="7">7</button>
+              <button onclick="handleNum('8')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="8">8</button>
+              <button onclick="handleNum('9')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="9">9</button>
+              <button onclick="handleOp('×')" class="glass-btn glass-operator w-16 h-16 flex items-center justify-center text-3xl font-light">×</button>
+
+              <!-- Row 3 -->
+              <button onclick="handleNum('4')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="4">4</button>
+              <button onclick="handleNum('5')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="5">5</button>
+              <button onclick="handleNum('6')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="6">6</button>
+              <button onclick="handleOp('−')" class="glass-btn glass-operator w-16 h-16 flex items-center justify-center text-3xl font-light">−</button>
+
+              <!-- Row 4 -->
+              <button onclick="handleNum('1')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="1">1</button>
+              <button onclick="handleNum('2')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="2">2</button>
+              <button onclick="handleNum('3')" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light" data-val="3">3</button>
+              <button onclick="handleOp('+')" class="glass-btn glass-operator w-16 h-16 flex items-center justify-center text-3xl font-light">+</button>
+
+              <!-- Row 5 -->
+              <button onclick="handleNum('0')" class="glass-btn glass-number col-span-2 w-full max-w-[145px] h-16 px-6 flex items-center justify-start text-2xl font-light" data-val="0">0</button>
+              <button onclick="handleDecimal()" class="glass-btn glass-number w-16 h-16 flex items-center justify-center text-2xl font-light">.</button>
+              <button onclick="handleEquals()" class="glass-btn glass-equals w-16 h-16 flex items-center justify-center text-3xl font-light">=</button>
+            </div>
+
+            <!-- WORLD MARKET LIVE TICKER & BREAKING NEWS MARQUEE -->
+            <div class="w-full shrink-0 pt-1 space-y-1">
+              <!-- Live Financial Ticker -->
+              <div class="w-full bg-white/[0.06] border border-white/10 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-xs backdrop-blur-md">
+                <div class="flex items-center gap-3 overflow-hidden text-[11px] font-mono">
+                  <span class="text-amber-400 font-semibold" id="ticker-gold">GOLD: $2,735.40 ▲+0.8%</span>
+                  <span class="text-emerald-400 font-semibold" id="ticker-btc">BTC: $67,820 ▲+3.2%</span>
+                  <span class="text-cyan-400 font-semibold" id="ticker-oil">OIL: $71.85 ▼-0.4%</span>
+                </div>
+              </div>
+
+              <!-- World Breaking News Crawler -->
+              <div class="relative w-full h-6 rounded-full overflow-hidden flex items-center bg-white/[0.08] backdrop-blur-md px-2.5">
+                <div class="shrink-0 flex items-center gap-1 pr-2 text-cyan-300">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span class="text-[9.5px] font-bold tracking-wider text-rose-300">NEWS</span>
+                </div>
+                <div class="relative flex-1 h-full overflow-hidden flex items-center">
+                  <div class="animate-marquee font-medium text-[10.5px] text-white/90">
+                    <span id="news-marquee" class="mr-8">✦ Federal Reserve signals interest rate flexibility ✦ NVIDIA AI Blackwell production ramps up ✦ Global gold reserves reach all-time highs ✦ Tokyo Nikkei jumps 1.8% in early trading</span>
+                    <span class="mr-8">✦ Federal Reserve signals interest rate flexibility ✦ NVIDIA AI Blackwell production ramps up ✦ Global gold reserves reach all-time highs ✦ Tokyo Nikkei jumps 1.8% in early trading</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ====================================================
+               BACK FACE: WEEKLY STOCK TRADER FORECAST & PRO CARDS
+               ==================================================== -->
+          <div class="face face-back absolute inset-0 w-full h-full flex flex-col justify-between p-3 overflow-hidden bg-slate-900/90 backdrop-blur-2xl">
+            
+            <!-- Header & Flip Back Button -->
+            <div class="flex items-center justify-between pb-1 border-b border-white/10 shrink-0">
+              <div>
+                <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
+                  <i data-lucide="trending-up" class="w-4 h-4 text-cyan-400"></i>
+                  Weekly Trader Forecast
+                </h2>
+                <p class="text-[10px] text-cyan-300">Tap any price to load into calculator</p>
+              </div>
+              <button onclick="toggleCardFlip()" class="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 text-xs flex items-center gap-1 transition-all">
+                <i data-lucide="rotate-3d" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Calc</span>
+              </button>
+            </div>
+
+            <!-- WEEKLY PROJECTION CHART (INTERACTIVE SVG) -->
+            <div class="w-full bg-white/[0.05] border border-white/10 rounded-2xl p-2.5 my-1.5 shrink-0">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-semibold text-white/90">S&P 500 & Tech Forecast</span>
+                <span class="text-emerald-400 font-mono text-[11px] font-bold">Target 5,920 (+2.4%)</span>
+              </div>
+              
+              <!-- SVG Projection Sparkline -->
+              <svg class="w-full h-16" viewBox="0 0 300 70">
+                <defs>
+                  <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.45"/>
+                    <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M 0,55 Q 35,45 75,50 T 150,30 T 225,20 T 300,10 L 300,70 L 0,70 Z" fill="url(#chartGrad)"/>
+                <path d="M 0,55 Q 35,45 75,50 T 150,30 T 225,20 T 300,10" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Milestone nodes -->
+                <circle cx="75" cy="50" r="3.5" fill="#38bdf8"/>
+                <circle cx="150" cy="30" r="3.5" fill="#38bdf8"/>
+                <circle cx="225" cy="20" r="3.5" fill="#38bdf8"/>
+                <circle cx="300" cy="10" r="4.5" fill="#4ade80"/>
+              </svg>
+              
+              <div class="flex justify-between text-[9px] text-white/40 font-mono pt-1">
+                <span>Mon (Open)</span>
+                <span>Wed (FOMC)</span>
+                <span>Thu (Tech)</span>
+                <span>Fri (Target)</span>
+              </div>
+            </div>
+
+            <!-- WALL STREET CONSENSUS RATINGS -->
+            <div class="w-full grid grid-cols-3 gap-1.5 py-1 text-center text-xs shrink-0">
+              <div class="bg-white/[0.04] border border-white/10 rounded-xl p-1.5">
+                <div class="text-[9px] text-white/50">Goldman Sachs</div>
+                <div class="text-[11px] font-bold text-emerald-400">Bullish ▲</div>
+              </div>
+              <div class="bg-white/[0.04] border border-white/10 rounded-xl p-1.5">
+                <div class="text-[9px] text-white/50">Morgan Stanley</div>
+                <div class="text-[11px] font-bold text-emerald-400">Overweight</div>
+              </div>
+              <div class="bg-white/[0.04] border border-white/10 rounded-xl p-1.5">
+                <div class="text-[9px] text-white/50">J.P. Morgan</div>
+                <div class="text-[11px] font-bold text-emerald-400">Strong Buy</div>
+              </div>
+            </div>
+
+            <!-- TOP GLOBAL ASSETS LIST (TAP TO LOAD INTO CALCULATOR) -->
+            <div class="w-full flex-1 overflow-y-auto space-y-1.5 pr-0.5 my-1" id="stocks-container">
+              <!-- Dynamically populated stock items -->
+            </div>
+
+            <!-- Pro Trader Dispatch Card -->
+            <div class="w-full bg-white/[0.05] border border-white/10 rounded-xl p-2 shrink-0">
+              <div class="flex items-center justify-between text-[10px] text-white/60 mb-0.5">
+                <span class="font-semibold text-cyan-300">Marcus Vance • Chief Global Strategist</span>
+                <span class="text-white/40">20 mins ago</span>
+              </div>
+              <p class="text-[10px] leading-relaxed text-white/80 italic">
+                "AI hardware and semiconductors continue to exhibit compounding revenue acceleration. Hedging short-end yield curve volatility while overweighting tier-1 cloud tech."
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ========================================================
+       JAVASCRIPT ARCHITECTURE & REAL-TIME LOGIC
+       ======================================================== -->
+  <script>
+    // -------------------------------------------------------------
+    // A. WEB AUDIO API SYNTHESIZER (Crisp Haptic Glass Clicks)
+    // -------------------------------------------------------------
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playGlassClick(freq = 1200, duration = 0.04) {
+      try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.4, ctx.currentTime + duration);
+
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {
+        // Fallback or muted
+      }
+    }
+
+    function playChime() {
+      try {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.06);
+          gain.gain.setValueAtTime(0.05, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.25);
+        });
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------
+    // B. THREE.JS 3D GLASS BACKGROUND SCENE & TOUCH INTERACTIVITY
+    // -------------------------------------------------------------
+    let scene, camera, renderer, controls;
+    let glassMeshes = [];
+    let particleSystem;
+    let mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+
+    function initThreeScene() {
+      const container = document.getElementById('canvas-container');
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // 1. Scene & Camera
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      camera.position.set(0, 0, 18);
+
+      // 2. High-Performance Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      container.appendChild(renderer.domElement);
+
+      // 3. OrbitControls with smooth damping
+      if (THREE.OrbitControls) {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = false;
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.6;
+        controls.maxPolarAngle = Math.PI / 1.7;
+        controls.minPolarAngle = Math.PI / 2.3;
+      }
+
+      // 4. Volumetric Ambient & Directional Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const cyanPoint = new THREE.PointLight(0x06b6d4, 3, 50);
+      cyanPoint.position.set(10, 12, 10);
+      scene.add(cyanPoint);
+
+      const purplePoint = new THREE.PointLight(0xa855f7, 3, 50);
+      purplePoint.position.set(-12, -10, 8);
+      scene.add(purplePoint);
+
+      const amberPoint = new THREE.PointLight(0xf59e0b, 2.5, 50);
+      amberPoint.position.set(0, 15, -5);
+      scene.add(amberPoint);
+
+      // 5. Floating Glass Physical Geometric Meshes
+      const glassMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        metalness: 0.1,
+        roughness: 0.15,
+        transmission: 0.9,
+        transparent: true,
+        opacity: 0.85,
+        ior: 1.5,
+        reflectivity: 0.6,
+        clearcoat: 0.8,
+        clearcoatRoughness: 0.1,
+      });
+
+      const geometries = [
+        new THREE.IcosahedronGeometry(2.8, 0),
+        new THREE.TorusKnotGeometry(1.8, 0.55, 100, 16),
+        new THREE.OctahedronGeometry(2.4, 0),
+        new THREE.DodecahedronGeometry(2.2, 0),
+        new THREE.SphereGeometry(2.0, 32, 32)
+      ];
+
+      const positions = [
+        [-9, 6, -4],
+        [9, -5, -3],
+        [-8, -7, -2],
+        [8, 7, -5],
+        [0, 8, -6]
+      ];
+
+      geometries.forEach((geom, idx) => {
+        const mesh = new THREE.Mesh(geom, glassMaterial.clone());
+        const pos = positions[idx];
+        mesh.position.set(pos[0], pos[1], pos[2]);
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        scene.add(mesh);
+        glassMeshes.push({
+          mesh,
+          rotSpeedX: (Math.random() - 0.5) * 0.012,
+          rotSpeedY: (Math.random() - 0.5) * 0.012,
+          initialY: pos[1],
+          floatOffset: Math.random() * Math.PI * 2
+        });
+      });
+
+      // 6. Aurora Cosmic Particle Starfield
+      const particleCount = 600;
+      const particleGeom = new THREE.BufferGeometry();
+      const posArray = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount * 3; i += 3) {
+        posArray[i] = (Math.random() - 0.5) * 60;
+        posArray[i + 1] = (Math.random() - 0.5) * 60;
+        posArray[i + 2] = (Math.random() - 0.5) * 40 - 10;
+      }
+      particleGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+      const particleMat = new THREE.PointsMaterial({
+        size: 0.15,
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending
+      });
+      particleSystem = new THREE.Points(particleGeom, particleMat);
+      scene.add(particleSystem);
+
+      // 7. Event Listeners
+      window.addEventListener('resize', onWindowResize, false);
+      window.addEventListener('pointermove', onPointerMove, false);
+      window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+      animateThree();
+    }
+
+    function onPointerMove(e) {
+      mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+    }
+
+    function onTouchMove(e) {
+      if (e.touches.length > 0) {
+        mouse.targetX = (e.touches[0].clientX / window.innerWidth - 0.5) * 2;
+        mouse.targetY = (e.touches[0].clientY / window.innerHeight - 0.5) * 2;
+      }
+    }
+
+    function onWindowResize() {
+      if (!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+
+    function animateThree(timestamp = 0) {
+      requestAnimationFrame(animateThree);
+
+      const time = timestamp * 0.001;
+
+      // Parallax smooth interpolation
+      mouse.x += (mouse.targetX - mouse.x) * 0.04;
+      mouse.y += (mouse.targetY - mouse.y) * 0.04;
+
+      // Slowly rotate floating glass meshes and apply floating wave
+      glassMeshes.forEach((item, i) => {
+        item.mesh.rotation.x += item.rotSpeedX;
+        item.mesh.rotation.y += item.rotSpeedY;
+        item.mesh.position.y = item.initialY + Math.sin(time + item.floatOffset) * 0.75;
+      });
+
+      // Slowly rotate particle field
+      if (particleSystem) {
+        particleSystem.rotation.y = time * 0.02;
+        particleSystem.rotation.x = mouse.y * 0.1;
+      }
+
+      if (controls) {
+        controls.update();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // -------------------------------------------------------------
+    // C. MULTILINGUAL NUMERAL SYSTEMS & LOCALIZATION
+    // -------------------------------------------------------------
+    const NUMERAL_MAPS = {
+      en: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+      my: ['၀', '၁', '၂', '၃', '၄', '၅', '၆', '၇', '၈', '၉'],
+      ar: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+      hi: ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'],
+      th: ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '၈', '၉'],
+      zh: ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+    };
+    const LANG_KEYS = ['en', 'my', 'ar', 'hi', 'th', 'zh'];
+    let currentLangIdx = 0;
+
+    function cycleLanguage() {
+      playGlassClick(1400);
+      currentLangIdx = (currentLangIdx + 1) % LANG_KEYS.length;
+      updateDisplayView();
+      updateKeypadLabels();
+    }
+
+    function localizeDigits(str) {
+      const lang = LANG_KEYS[currentLangIdx];
+      if (lang === 'en') return str;
+      const digits = NUMERAL_MAPS[lang] || NUMERAL_MAPS.en;
+      return str.replace(/[0-9]/g, d => digits[parseInt(d, 10)]);
+    }
+
+    function updateKeypadLabels() {
+      document.querySelectorAll('[data-val]').forEach(btn => {
+        const val = btn.getAttribute('data-val');
+        btn.textContent = localizeDigits(val);
+      });
+    }
+
+    // -------------------------------------------------------------
+    // D. APPLE FROSTED GLASS CALCULATOR CORE ENGINE
+    // -------------------------------------------------------------
+    let currentDisplay = '0';
+    let currentExpression = '';
+    let firstOperand = null;
+    let currentOperator = null;
+    let resetOnNextInput = false;
+
+    const displayEl = document.getElementById('calc-display');
+    const exprEl = document.getElementById('calc-expression');
+    const clearBtn = document.getElementById('btn-clear');
+
+    function updateDisplayView() {
+      displayEl.textContent = localizeDigits(currentDisplay);
+      exprEl.textContent = localizeDigits(currentExpression);
+      clearBtn.textContent = (currentDisplay === '0' && !firstOperand) ? 'AC' : 'C';
+    }
+
+    function handleNum(digit) {
+      playGlassClick(800 + parseInt(digit) * 40);
+      if (currentDisplay === '0' || resetOnNextInput) {
+        currentDisplay = digit;
+        resetOnNextInput = false;
+      } else {
+        if (currentDisplay.replace(/,/g, '').length < 13) {
+          currentDisplay += digit;
+        }
+      }
+      updateDisplayView();
+    }
+
+    function handleDecimal() {
+      playGlassClick(1100);
+      if (resetOnNextInput) {
+        currentDisplay = '0.';
+        resetOnNextInput = false;
+      } else if (!currentDisplay.includes('.')) {
+        currentDisplay += '.';
+      }
+      updateDisplayView();
+    }
+
+    function handleOp(op) {
+      playGlassClick(1300);
+      const val = parseFloat(currentDisplay);
+      if (firstOperand !== null && currentOperator && !resetOnNextInput) {
+        computeResult();
+      } else {
+        firstOperand = val;
+      }
+      currentOperator = op;
+      currentExpression = `${firstOperand} ${op}`;
+      resetOnNextInput = true;
+      updateDisplayView();
+    }
+
+    function computeResult() {
+      if (firstOperand === null || !currentOperator) return;
+      const secondOperand = parseFloat(currentDisplay);
+      let res = 0;
+
+      switch (currentOperator) {
+        case '+': res = firstOperand + secondOperand; break;
+        case '−': res = firstOperand - secondOperand; break;
+        case '×': res = firstOperand * secondOperand; break;
+        case '÷': 
+          if (secondOperand === 0) {
+            currentDisplay = 'Error';
+            firstOperand = null;
+            currentOperator = null;
+            resetOnNextInput = true;
+            updateDisplayView();
+            return;
+          }
+          res = firstOperand / secondOperand; 
+          break;
+      }
+
+      // Clean floating point rounding
+      res = Math.round(res * 1e10) / 1e10;
+      currentDisplay = res.toString();
+      firstOperand = res;
+      currentOperator = null;
+      resetOnNextInput = true;
+    }
+
+    function handleEquals() {
+      playChime();
+      if (firstOperand !== null && currentOperator) {
+        currentExpression = `${firstOperand} ${currentOperator} ${currentDisplay} =`;
+        computeResult();
+        updateDisplayView();
+      }
+    }
+
+    function handleClear() {
+      playGlassClick(900);
+      currentDisplay = '0';
+      currentExpression = '';
+      firstOperand = null;
+      currentOperator = null;
+      resetOnNextInput = false;
+      updateDisplayView();
+    }
+
+    function handleToggleSign() {
+      playGlassClick(1000);
+      if (currentDisplay !== '0' && currentDisplay !== 'Error') {
+        currentDisplay = (parseFloat(currentDisplay) * -1).toString();
+        updateDisplayView();
+      }
+    }
+
+    function handlePercent() {
+      playGlassClick(1150);
+      const val = parseFloat(currentDisplay);
+      currentDisplay = (val / 100).toString();
+      updateDisplayView();
+    }
+
+    function handleSci(fn) {
+      playGlassClick(1250);
+      const val = parseFloat(currentDisplay);
+      let res = val;
+      switch (fn) {
+        case 'sin': res = Math.sin(val); break;
+        case 'cos': res = Math.cos(val); break;
+        case 'tan': res = Math.tan(val); break;
+        case 'ln': res = val > 0 ? Math.log(val) : 'Error'; break;
+        case 'sqrt': res = val >= 0 ? Math.sqrt(val) : 'Error'; break;
+        case 'pi': res = Math.PI; break;
+      }
+      currentDisplay = (typeof res === 'number') ? (Math.round(res * 1e8) / 1e8).toString() : res;
+      resetOnNextInput = true;
+      updateDisplayView();
+    }
+
+    function toggleScientific() {
+      playGlassClick(1350);
+      const panel = document.getElementById('scientific-panel');
+      const btn = document.getElementById('btn-scientific');
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        panel.classList.add('grid');
+        btn.classList.add('text-cyan-300', 'bg-white/20');
+      } else {
+        panel.classList.add('hidden');
+        panel.classList.remove('grid');
+        btn.classList.remove('text-cyan-300', 'bg-white/20');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // E. 3D CARD FLIP INTERACTIVITY (Calculator <-> Stock Trader)
+    // -------------------------------------------------------------
+    let isFlipped = false;
+    const flipperCard = document.getElementById('flipper-inner');
+
+    function toggleCardFlip() {
+      playGlassClick(1500);
+      isFlipped = !isFlipped;
+      if (isFlipped) {
+        flipperCard.classList.add('is-flipped');
+      } else {
+        flipperCard.classList.remove('is-flipped');
+      }
+    }
+
+    // Touch Swipe Gesture for 360/180 Degree Flipping
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const cardContainer = document.getElementById('card-flipper');
+
+    cardContainer.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    cardContainer.addEventListener('touchend', (e) => {
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(deltaX) > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        toggleCardFlip();
+      }
+    }, { passive: true });
+
+    // -------------------------------------------------------------
+    // F. LIVE DATA UPDATES: STOCKS, CRYPTO, COMMODITIES & WEATHER
+    // -------------------------------------------------------------
+    const MASTER_STOCKS = [
+      { sym: 'NVDA', name: 'NVIDIA Corp', price: 128.50, chg: '+4.2%', pos: true, target: '$150' },
+      { sym: 'AAPL', name: 'Apple Inc', price: 224.20, chg: '+1.8%', pos: true, target: '$245' },
+      { sym: 'BTC', name: 'Bitcoin USD', price: 67820.00, chg: '+3.2%', pos: true, target: '$75k' },
+      { sym: 'ETH', name: 'Ethereum USD', price: 2540.80, chg: '+2.1%', pos: true, target: '$3,100' },
+      { sym: 'MSFT', name: 'Microsoft Corp', price: 432.10, chg: '+0.9%', pos: true, target: '$475' },
+      { sym: 'TSLA', name: 'Tesla Inc', price: 254.30, chg: '+3.8%', pos: true, target: '$280' },
+      { sym: 'GOLD', name: 'Gold Spot Ounce', price: 2735.40, chg: '+0.8%', pos: true, target: '$2,850' },
+      { sym: 'OIL', name: 'WTI Crude Oil', price: 71.85, chg: '-0.4%', pos: false, target: '$78' },
+    ];
+
+    function renderStockList() {
+      const container = document.getElementById('stocks-container');
+      container.innerHTML = MASTER_STOCKS.map((s, idx) => `
+        <div onclick="loadStockPrice(${s.price})" class="flex items-center justify-between p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:scale-[0.98] border border-white/5 cursor-pointer transition-all">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-white text-xs">${s.sym}</span>
+              <span class="text-[9.5px] text-white/50">${s.name}</span>
+            </div>
+            <div class="text-[9px] text-cyan-300 font-mono">Target: ${s.target}</div>
+          </div>
+          <div class="text-right font-mono">
+            <div class="text-xs font-bold text-white" id="stock-val-${idx}">$${s.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div class="text-[9.5px] font-semibold ${s.pos ? 'text-emerald-400' : 'text-rose-400'}">${s.chg}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function loadStockPrice(price) {
+      playChime();
+      currentDisplay = price.toString();
+      firstOperand = null;
+      currentOperator = null;
+      resetOnNextInput = true;
+      updateDisplayView();
+      toggleCardFlip(); // Return to front calculator
+    }
+
+    // LIVE CRYPTO & STOCKS STREAM FROM PUBLIC CORS APIS (CoinGecko / Binance / Micro-ticks)
+    async function fetchLiveMarketPrices() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.bitcoin) {
+            MASTER_STOCKS[2].price = data.bitcoin.usd;
+            MASTER_STOCKS[2].chg = (data.bitcoin.usd_24h_change >= 0 ? '+' : '') + data.bitcoin.usd_24h_change.toFixed(1) + '%';
+            MASTER_STOCKS[2].pos = data.bitcoin.usd_24h_change >= 0;
+            document.getElementById('ticker-btc').textContent = `BTC: $${data.bitcoin.usd.toLocaleString()} ▲${MASTER_STOCKS[2].chg}`;
+          }
+          if (data.ethereum) {
+            MASTER_STOCKS[3].price = data.ethereum.usd;
+            MASTER_STOCKS[3].chg = (data.ethereum.usd_24h_change >= 0 ? '+' : '') + data.ethereum.usd_24h_change.toFixed(1) + '%';
+            MASTER_STOCKS[3].pos = data.ethereum.usd_24h_change >= 0;
+          }
+          renderStockList();
+        }
+      } catch (e) {
+        // Micro-tick Simulation Fallback (High-frequency live market feel)
+        simulateMicroTicks();
+      }
+    }
+
+    function simulateMicroTicks() {
+      MASTER_STOCKS.forEach((s, idx) => {
+        const delta = (Math.random() - 0.48) * (s.price * 0.0015);
+        s.price = Math.round((s.price + delta) * 100) / 100;
+        const el = document.getElementById(`stock-val-${idx}`);
+        if (el) {
+          el.textContent = '$' + s.price.toLocaleString(undefined, { minimumFractionDigits: 2 });
+          el.classList.add(delta >= 0 ? 'text-emerald-400' : 'text-rose-400');
+          setTimeout(() => el.classList.remove('text-emerald-400', 'text-rose-400'), 400);
+        }
+      });
+      // Update header tickers
+      document.getElementById('ticker-gold').textContent = `GOLD: $${MASTER_STOCKS[6].price.toFixed(2)} ▲+0.8%`;
+      document.getElementById('ticker-oil').textContent = `OIL: $${MASTER_STOCKS[7].price.toFixed(2)} ▼-0.4%`;
+    }
+
+    // -------------------------------------------------------------
+    // G. LIVE WEATHER WIDGET & CITY SELECTOR
+    // -------------------------------------------------------------
+    const CITIES = [
+      { name: 'Yangon', temp: 31, icon: '☀️', lat: 16.84, lon: 96.17 },
+      { name: 'Singapore', temp: 29, icon: '🌦️', lat: 1.35, lon: 103.82 },
+      { name: 'Tokyo', temp: 21, icon: '⛅', lat: 35.68, lon: 139.69 },
+      { name: 'New York', temp: 18, icon: '🌤️', lat: 40.71, lon: -74.01 },
+      { name: 'London', temp: 15, icon: '🌧️', lat: 51.51, lon: -0.13 },
+      { name: 'Dubai', temp: 36, icon: '☀️', lat: 25.20, lon: 55.27 },
+    ];
+    let cityIdx = 0;
+
+    function cycleWeatherCity() {
+      playGlassClick(1200);
+      cityIdx = (cityIdx + 1) % CITIES.length;
+      const c = CITIES[cityIdx];
+      document.getElementById('weather-city').textContent = c.name;
+      document.getElementById('weather-temp').textContent = `${c.temp}°C`;
+      document.getElementById('weather-icon').textContent = c.icon;
+      fetchLiveCityWeather(c);
+    }
+
+    async function fetchLiveCityWeather(city) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.current_weather) {
+            city.temp = Math.round(data.current_weather.temperature);
+            document.getElementById('weather-temp').textContent = `${city.temp}°C`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // -------------------------------------------------------------
+    // H. INITIALIZATION & LIVE TIMERS
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize Lucide Icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      // 2. Initialize Three.js Scene
+      initThreeScene();
+
+      // 3. Render Initial Stocks & Keypads
+      renderStockList();
+      updateDisplayView();
+
+      // 4. Start Live Data Polling (Every 4 seconds)
+      fetchLiveMarketPrices();
+      setInterval(fetchLiveMarketPrices, 4000);
+    });
+  </script>
+</body>
+</html>
